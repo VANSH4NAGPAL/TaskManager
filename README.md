@@ -760,7 +760,7 @@ This project is open source and available under the [MIT License](LICENSE).
 
 - Email: nagpalvansh2004@gmail.com
 - GitHub: [@VANSH4NAGPAL](https://github.com/VANSH4NAGPAL)
-- LinkedIn: [Vansh Nagpal](https://linkedin.com/in/yourlinkedin)](https://www.linkedin.com/in/vansh-nagpal/)
+- LinkedIn: [Vansh Nagpal](https://www.linkedin.com/in/vansh-nagpal/)
 - Portfolio: [https://vanshdev.netlify.app/](https://vanshdev.netlify.app/)
 
 ---
