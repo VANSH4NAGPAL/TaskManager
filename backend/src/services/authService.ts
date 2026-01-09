@@ -49,11 +49,11 @@ export function refreshTokens(refreshToken: string | undefined) {
 
 export function issueAuth(userId: string) {
   const accessToken = jwt.sign({ sub: userId }, env.JWT_ACCESS_SECRET, {
-    expiresIn: `${env.ACCESS_TOKEN_TTL_MINUTES}m`,
+    expiresIn: `${env.ACCESS_TOKEN_TTL_MINUTES}m` as any,
   });
 
   const refreshToken = jwt.sign({ sub: userId }, env.JWT_REFRESH_SECRET, {
-    expiresIn: `${env.REFRESH_TOKEN_TTL_DAYS}d`,
+    expiresIn: `${env.REFRESH_TOKEN_TTL_DAYS}d` as any,
   });
 
   return { accessToken, refreshToken };

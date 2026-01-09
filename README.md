@@ -22,7 +22,7 @@ A modern, scalable, and secure full-stack web application with authentication an
 
 Frontend Developer Intern Assignment - Built a production-ready full-stack application demonstrating modern web development practices, security implementations, and scalable architecture within 3 days.
 
-**Skills Demonstrated:** React.js, Next.js, TypeScript, Node.js, Express, Prisma ORM, PostgreSQL, JWT Authentication, RESTful APIs, Responsive Design, State Management, Security Best Practices
+**Skills Demonstrated:** React.js, Next.js, TypeScript, Node.js, Express, Prisma ORM, PostgreSQL, JWT Authentication, Zod Validation, RESTful APIs, Framer Motion, React Query, Responsive Design, State Management, Security Best Practices
 
 ---
 
