@@ -41,7 +41,6 @@ image optimization across client and academic projects
 - [API Documentation](#-api-documentation)
 - [Security](#-security)
 - [Scalability & Production Notes](#-scalability--production-notes)
-- [Assignment Checklist](#-assignment-checklist)
 - [Screenshots](#-screenshots)
 - [Deployment](#-deployment)
 
@@ -59,7 +58,7 @@ image optimization across client and academic projects
 
 ### Why This Project?
 
-This project was built as part of a Frontend Developer Intern assignment, demonstrating the ability to:
+This project showcases my ability to:
 - Build scalable, modern web applications from scratch
 - Integrate frontend and backend seamlessly
 - Implement security best practices
@@ -616,9 +615,9 @@ app.use((req, res, next) => {
 
 ---
 
-## ✅ Assignment Checklist
+## ✅ Project Features Checklist
 
-### Frontend (Primary Focus)
+### Frontend
 - [x] Built with **Next.js** (React framework)
 - [x] **Responsive design** using TailwindCSS
 - [x] **Forms with validation** (client + server side)
