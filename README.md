@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Status](https://img.shields.io/badge/Status-Production%20Ready-success)
+![Status](https://img.shields.io/badge/Status-Deployed-success)
 ![Next.js](https://img.shields.io/badge/Next.js-16.1.1-black)
 ![Node.js](https://img.shields.io/badge/Node.js-Express-green)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)
