@@ -677,20 +677,24 @@ app.use((req, res, next) => {
 ## 📸 Screenshots
 
 ### Landing Page
-![Landing Page](./docs/screenshots/landing.png)
-*Minimal design with animated SVG curves and staggered text animations*
+<img width="2557" height="1266" alt="image" src="https://github.com/user-attachments/assets/d57452c2-71bf-4806-9da6-9ff053b59134" />
+
+
 
 ### Authentication
-![Login Page](./docs/screenshots/login.png)
-*Glass morphism card with curved background*
+<img width="2559" height="1268" alt="image" src="https://github.com/user-attachments/assets/c4214d6f-a0bc-460d-a200-25b7e37222b7" />
+
+
 
 ### Dashboard
-![Dashboard](./docs/screenshots/dashboard.png)
-*Clean task management with animated status cards*
+<img width="2559" height="1267" alt="image" src="https://github.com/user-attachments/assets/0064df44-56a1-4423-906a-6d1c1823b982" />
+
+
 
 ### Task Management
-![Task Modal](./docs/screenshots/task-modal.png)
-*Create/Edit task modal with validation*
+<img width="485" height="534" alt="image" src="https://github.com/user-attachments/assets/92291337-338a-4b77-9203-87cac951caf4" />
+
+
 
 ---
 
@@ -754,10 +758,10 @@ This project is open source and available under the [MIT License](LICENSE).
 
 **Vansh Nagpal**
 
-- Email: your.email@example.com
-- GitHub: [@yourusername](https://github.com/yourusername)
-- LinkedIn: [yourlinkedin](https://linkedin.com/in/yourlinkedin)
-- Portfolio: [yourportfolio.com](https://yourportfolio.com)
+- Email: nagpalvansh2004@gmail.com
+- GitHub: [@VANSH4NAGPAL](https://github.com/VANSH4NAGPAL)
+- LinkedIn: [Vansh Nagpal](https://linkedin.com/in/yourlinkedin)](https://www.linkedin.com/in/vansh-nagpal/)
+- Portfolio: [https://vanshdev.netlify.app/](https://vanshdev.netlify.app/)
 
 ---
 
