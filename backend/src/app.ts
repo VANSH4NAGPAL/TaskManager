@@ -12,6 +12,9 @@ import { taskRouter } from "./routes/tasks";
 
 const app = express();
 
+// Trust proxy - required for Railway/production deployment
+app.set('trust proxy', 1);
+
 const limiter = rateLimit({
   windowMs: env.rateLimitWindowMs,
   max: env.rateLimitMax,
