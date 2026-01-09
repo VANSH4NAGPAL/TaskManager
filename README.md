@@ -8,9 +8,12 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
-**[Live Demo](#) • [API Documentation](#api-documentation) • [Report Bug](#)**
+**[Live Demo](https://task-manager-ten-omega-60.vercel.app) • [API Documentation](#-api-documentation) • [GitHub Repo](https://github.com/VANSH4NAGPAL/TaskManager)**
 
 A modern, scalable, and secure full-stack web application with authentication and task management dashboard.
+
+**🌐 Live Application:** [https://task-manager-ten-omega-60.vercel.app](https://task-manager-ten-omega-60.vercel.app)  
+**🔗 Backend API:** [https://taskmanager-production-622d.up.railway.app](https://taskmanager-production-622d.up.railway.app)
 
 </div>
 
@@ -20,7 +23,9 @@ A modern, scalable, and secure full-stack web application with authentication an
 
 **Vansh Nagpal**
 
-Frontend Developer Intern Assignment - Built a production-ready full-stack application demonstrating modern web development practices, security implementations, and scalable architecture within 3 days.
+Full Stack Developer experienced in building web applications using React, Tailwind CSS, and JavaScript, with
+backend integration using Firebase. Worked on UI implementation, animations, authentication, API integration, and
+image optimization across client and academic projects
 
 **Skills Demonstrated:** React.js, Next.js, TypeScript, Node.js, Express, Prisma ORM, PostgreSQL, JWT Authentication, Zod Validation, RESTful APIs, Framer Motion, React Query, Responsive Design, State Management, Security Best Practices
 
