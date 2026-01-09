@@ -28,17 +28,17 @@ Frontend Developer Intern Assignment - Built a production-ready full-stack appli
 
 ## 📋 Table of Contents
 
-- [About the Project](#about-the-project)
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Architecture](#architecture)
-- [Getting Started](#getting-started)
-- [API Documentation](#api-documentation)
-- [Security](#security)
-- [Scalability & Production Notes](#scalability--production-notes)
-- [Assignment Checklist](#assignment-checklist)
-- [Screenshots](#screenshots)
-- [Deployment](#deployment)
+- [About the Project](#-about-the-project)
+- [Features](#-features)
+- [Tech Stack](#️-tech-stack)
+- [Architecture](#️-architecture)
+- [Getting Started](#-getting-started)
+- [API Documentation](#-api-documentation)
+- [Security](#-security)
+- [Scalability & Production Notes](#-scalability--production-notes)
+- [Assignment Checklist](#-assignment-checklist)
+- [Screenshots](#-screenshots)
+- [Deployment](#-deployment)
 
 ---
 
