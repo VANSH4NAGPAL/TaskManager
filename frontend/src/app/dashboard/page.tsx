@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, Variants } from "framer-motion";
 import { KanbanBoard } from "../../components/kanban/KanbanBoard";
 import { TaskListItem } from "../../components/dashboard/TaskListItem";
 import { useCurrentUser, useLogout } from "../../hooks/useAuth";
@@ -75,7 +75,7 @@ type TabType = "my-tasks" | "shared" | "archived";
 type FilterType = "ALL" | TaskStatus;
 
 // Smooth dropdown animation config
-const dropdownVariants = {
+const dropdownVariants: Variants = {
   hidden: {
     opacity: 0,
     scale: 0.95,
@@ -839,7 +839,7 @@ export default function DashboardPage() {
               value={draft.title}
               onChange={(e) => setDraft(d => ({ ...d, title: e.target.value }))}
               placeholder="Task title"
-              disabled={editing && !canEdit(editing)}
+              disabled={!!editing && !canEdit(editing)}
             />
           </div>
           <div>
@@ -848,7 +848,7 @@ export default function DashboardPage() {
               <button
                 type="button"
                 onClick={handleGenerate}
-                disabled={isGenerating || !draft.title || (editing && !canEdit(editing))}
+                disabled={isGenerating || !draft.title || (!!editing && !canEdit(editing))}
                 className="text-xs flex items-center gap-1 text-teal-600 hover:text-teal-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isGenerating ? <Loader className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
@@ -860,7 +860,7 @@ export default function DashboardPage() {
               value={draft.description}
               onChange={(e) => setDraft(d => ({ ...d, description: e.target.value }))}
               placeholder="Add details..."
-              disabled={editing && !canEdit(editing)}
+              disabled={!!editing && !canEdit(editing)}
             />
           </div>
           <div>
@@ -869,7 +869,7 @@ export default function DashboardPage() {
               value={draft.tags}
               onChange={(e) => setDraft(d => ({ ...d, tags: e.target.value }))}
               placeholder="design, frontend"
-              disabled={editing && !canEdit(editing)}
+              disabled={!!editing && !canEdit(editing)}
             />
           </div>
           <div>
@@ -880,7 +880,7 @@ export default function DashboardPage() {
                   key={s.value}
                   type="button"
                   onClick={() => setDraft(d => ({ ...d, status: s.value }))}
-                  disabled={editing && !canEdit(editing)}
+                  disabled={!!editing && !canEdit(editing)}
                   className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-all ${draft.status === s.value ? "text-white border-transparent" : "bg-white text-gray-600 border-gray-200"
                     } ${editing && !canEdit(editing) ? "opacity-50 cursor-not-allowed" : ""}`}
                   style={draft.status === s.value ? { backgroundColor: s.color } : {}}
