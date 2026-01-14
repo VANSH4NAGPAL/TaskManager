@@ -1,9 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -14,30 +11,75 @@ datasource db {
 }
 
 model User {
-  id             String   @id @default(cuid())
+  id             String         @id @default(cuid())
   name           String
-  email          String   @unique
+  email          String         @unique
   hashedPassword String
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
   tasks          Task[]
+  sharedTasks    TaskShare[]
+  notifications  Notification[]
+  defaultView    DefaultView    @default(LIST)
+}
+
+// ... existing models ...
+
+enum DefaultView {
+  LIST
+  BOARD
 }
 
 model Task {
-  id          String   @id @default(cuid())
+  id          String      @id @default(cuid())
   title       String
   description String
-  status      TaskStatus @default(TODO)
+  status      TaskStatus  @default(TODO)
   tags        String[]
   dueDate     DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  archived    Boolean     @default(false)
+  archivedAt  DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId      String
+  sharedWith  TaskShare[]
+}
+
+model TaskShare {
+  id         String     @id @default(cuid())
+  task       Task       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskId     String
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  permission Permission @default(VIEWER)
+  sharedBy   String
+  createdAt  DateTime   @default(now())
+
+  @@unique([taskId, userId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  type      String   // TASK_EDITED, TASK_SHARED, COLLABORATOR_ADDED, PERMISSION_CHANGED
+  taskId    String
+  taskTitle String
+  actorId   String
+  actorName String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
 }
 
 enum TaskStatus {
   TODO
   IN_PROGRESS
   DONE
+}
+
+enum Permission {
+  VIEWER
+  EDITOR
 }

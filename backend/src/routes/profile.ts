@@ -9,6 +9,7 @@ export const profileRouter = Router();
 
 const updateSchema = z.object({
   name: z.string().min(2).optional(),
+  defaultView: z.enum(["LIST", "BOARD"]).optional(),
 });
 
 profileRouter.get(
@@ -18,7 +19,7 @@ profileRouter.get(
     if (!req.userId) throw new HttpError(401, "Unauthorized");
     const user = await prisma.user.findUnique({
       where: { id: req.userId },
-      select: { id: true, name: true, email: true, createdAt: true, updatedAt: true },
+      select: { id: true, name: true, email: true, defaultView: true, createdAt: true, updatedAt: true },
     });
     if (!user) throw new HttpError(404, "User not found");
     res.json({ user });
@@ -38,7 +39,7 @@ profileRouter.patch(
     const updated = await prisma.user.update({
       where: { id: req.userId },
       data: parsed.data,
-      select: { id: true, name: true, email: true, createdAt: true, updatedAt: true },
+      select: { id: true, name: true, email: true, defaultView: true, createdAt: true, updatedAt: true },
     });
     res.json({ user: updated });
   })

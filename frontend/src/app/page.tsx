@@ -1,239 +1,284 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { Button } from "../components/ui/button";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Shield,
+  Zap,
+  Users,
+  ArrowRight,
+  CheckCircle2,
+  Github,
+  Twitter,
+  Linkedin,
+  ChevronDown,
+  Download,
+  Archive,
+} from "lucide-react";
 
 export default function Home() {
-  return (
-    <div className="min-h-screen relative overflow-hidden flex flex-col">
-      {/* Animated curved line in background */}
-      <svg
-        className="absolute inset-0 w-full h-full pointer-events-none opacity-20"
-        viewBox="0 0 1200 800"
-        preserveAspectRatio="xMidYMid slice"
-      >
-        <motion.path
-          d="M -100 400 Q 200 100, 600 350 T 1300 400 Q 1000 100, 800 450 Q 600 600, 700 900"
-          stroke="currentColor"
-          strokeWidth="80"
-          fill="none"
-          className="text-[--ink]"
-          strokeLinecap="round"
-          initial={{ pathLength: 0, opacity: 0 }}
-          animate={{ pathLength: 1, opacity: 1 }}
-          transition={{ duration: 3, delay: 1, ease: "easeInOut" }}
-        />
-      </svg>
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
 
+  const features = [
+    {
+      icon: Shield,
+      title: "Secure",
+      description: "JWT authentication with encrypted passwords. Your data is protected.",
+    },
+    {
+      icon: Zap,
+      title: "Real-time",
+      description: "Live notifications when collaborators make changes to shared tasks.",
+    },
+    {
+      icon: Users,
+      title: "Collaborate",
+      description: "Share tasks with team members. Control permissions with viewer/editor roles.",
+    },
+    {
+      icon: Download,
+      title: "Export",
+      description: "Download your tasks as JSON or CSV anytime. Your data belongs to you.",
+    },
+    {
+      icon: Archive,
+      title: "Organize",
+      description: "Archive completed tasks to keep your workspace clean and focused.",
+    },
+  ];
+
+  const faqs = [
+    {
+      q: "Is PrimeDashboard free?",
+      a: "Yes! PrimeDashboard is completely free to use with all features included.",
+    },
+    {
+      q: "How secure is my data?",
+      a: "We use JWT authentication with bcrypt-encrypted passwords and secure HTTPS connections. Your data is stored safely and never shared.",
+    },
+    {
+      q: "Can I collaborate with my team?",
+      a: "Yes! Share any task with team members by email. You can set them as Viewer (read-only) or Editor (can modify). You'll get notified when they make changes.",
+    },
+    {
+      q: "Can I export my data?",
+      a: "Absolutely. Export all your tasks as JSON or CSV with one click. Your data is yours.",
+    },
+  ];
+
+  return (
+    <div className="min-h-screen flex flex-col bg-dots" style={{ backgroundColor: "#fafafa" }}>
       {/* Header */}
-      <motion.header
-        className="flex items-center justify-between w-full max-w-6xl mx-auto px-6 py-6"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5 }}
-      >
-        <div className="text-lg font-medium">PrimeDashboard</div>
-        <div className="flex items-center gap-3">
+      <header className="relative z-20 flex items-center justify-between w-full max-w-5xl mx-auto px-6 py-5">
+        <Link href="/" className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: "#0d9488" }}>
+            <span className="text-white font-semibold text-sm">P</span>
+          </div>
+          <span className="font-medium text-gray-900">PrimeDashboard</span>
+        </Link>
+
+        <nav className="hidden md:flex items-center gap-6 text-sm text-gray-600">
+          <Link href="#features" className="hover:text-gray-900 transition-colors">Features</Link>
+          <Link href="#faq" className="hover:text-gray-900 transition-colors">FAQ</Link>
+        </nav>
+
+        <div className="flex items-center gap-2">
           <Link href="/login">
-            <Button variant="ghost" size="md">
-              Login
-            </Button>
+            <Button variant="ghost" size="sm" className="text-gray-600">Log in</Button>
           </Link>
           <Link href="/signup">
-            <Button variant="solid" size="md">
-              Sign up
-            </Button>
+            <Button size="sm">Get Started</Button>
           </Link>
         </div>
-      </motion.header>
+      </header>
 
-      {/* Main Content */}
-      <main className="relative z-10 flex-1 flex flex-col items-center px-6 pt-32 pb-20 text-center max-w-4xl mx-auto">
-        <div className="mb-8">
-          <motion.h1
-            className="text-6xl md:text-7xl font-light text-[--ink] tracking-tight leading-tight"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.8, delay: 0.1 }}
-          >
-            <motion.span
-              className="inline-block"
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, delay: 0.2, ease: "easeOut" }}
-            >
-              Organize your work,
-            </motion.span>
-            <br />
-            <motion.span
-              className="inline-block"
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, delay: 0.4, ease: "easeOut" }}
-            >
-              simply
-            </motion.span>
-          </motion.h1>
-        </div>
-
-        <motion.p
-          className="text-lg text-[--muted] mb-12 max-w-xl leading-relaxed"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: 0.6 }}
-        >
-          A minimal task management dashboard with secure authentication
-        </motion.p>
-
+      {/* Hero */}
+      <section className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 py-20">
         <motion.div
-          className="flex gap-4"
+          className="text-center max-w-2xl mx-auto"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
+          transition={{ duration: 0.5 }}
         >
-          <Link href="/signup">
-            <Button variant="solid" size="lg">
-              Get started
-            </Button>
-          </Link>
-          <Link href="/login">
-            <Button variant="outline" size="lg">
-              Sign in
-            </Button>
-          </Link>
+          <span className="inline-block px-3 py-1 text-sm font-medium rounded-full mb-6" style={{ backgroundColor: "#f0fdfa", color: "#0d9488" }}>
+            Simple task management
+          </span>
+          <h1 className="text-4xl md:text-5xl font-semibold text-gray-900 leading-tight mb-4">
+            Organize your work, <br />simply.
+          </h1>
+          <p className="text-lg text-gray-500 mb-8 max-w-lg mx-auto">
+            A minimal, focused task manager. Create tasks, collaborate with your team, and stay organized.
+          </p>
+          <div className="flex items-center justify-center gap-3">
+            <Link href="/signup">
+              <Button size="lg">
+                Start for free
+                <ArrowRight className="ml-2 w-4 h-4" />
+              </Button>
+            </Link>
+            <Link href="/login">
+              <Button variant="outline" size="lg">Log in</Button>
+            </Link>
+          </div>
         </motion.div>
 
-        {/* Connected feature flow */}
-        <div className="relative w-full mt-32">
-          {/* Feature cards */}
-          <div className="relative grid grid-cols-1 md:grid-cols-3 gap-16">
-            <motion.div
-              className="text-center flex flex-col items-center"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.5 }}
-            >
-              {/* Node circle */}
-              <motion.div
-                className="w-3 h-3 bg-[--ink] rounded-full mb-8"
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ duration: 0.4, delay: 0.8 }}
-              />
-              
-              <motion.h3
-                className="font-medium text-2xl mb-3"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5, delay: 1 }}
-              >
-                Secure
-              </motion.h3>
-              <motion.p
-                className="text-sm text-[--muted] leading-relaxed max-w-[200px]"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5, delay: 1.1 }}
-              >
-                JWT authentication with encrypted passwords
-              </motion.p>
-            </motion.div>
-
-            <motion.div
-              className="text-center flex flex-col items-center"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.7 }}
-            >
-              {/* Node circle */}
-              <motion.div
-                className="w-3 h-3 bg-[--ink] rounded-full mb-8"
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ duration: 0.4, delay: 1.2 }}
-              />
-              
-              <motion.h3
-                className="font-medium text-2xl mb-3"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5, delay: 1.4 }}
-              >
-                Fast
-              </motion.h3>
-              <motion.p
-                className="text-sm text-[--muted] leading-relaxed max-w-[200px]"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5, delay: 1.5 }}
-              >
-                Real-time updates and instant search
-              </motion.p>
-            </motion.div>
-
-            <motion.div
-              className="text-center flex flex-col items-center"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.9 }}
-            >
-              {/* Node circle */}
-              <motion.div
-                className="w-3 h-3 bg-[--ink] rounded-full mb-8"
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ duration: 0.4, delay: 1.6 }}
-              />
-              
-              <motion.h3
-                className="font-medium text-2xl mb-3"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5, delay: 1.8 }}
-              >
-                Simple
-              </motion.h3>
-              <motion.p
-                className="text-sm text-[--muted] leading-relaxed max-w-[200px]"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5, delay: 1.9 }}
-              >
-                Clean interface, no clutter
-              </motion.p>
-            </motion.div>
+        {/* Dashboard Preview */}
+        <motion.div
+          className="mt-16 max-w-4xl w-full mx-auto"
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+        >
+          <div className="bg-white rounded-xl border shadow-lg overflow-hidden" style={{ borderColor: "#e5e7eb" }}>
+            {/* Browser bar */}
+            <div className="flex items-center gap-2 px-4 py-3 border-b" style={{ borderColor: "#e5e7eb", backgroundColor: "#f9fafb" }}>
+              <div className="flex gap-1.5">
+                <div className="w-3 h-3 rounded-full bg-gray-300" />
+                <div className="w-3 h-3 rounded-full bg-gray-300" />
+                <div className="w-3 h-3 rounded-full bg-gray-300" />
+              </div>
+              <div className="flex-1 text-center text-xs text-gray-400">primedashboard.app/dashboard</div>
+            </div>
+            {/* Content */}
+            <div className="p-6">
+              <div className="grid grid-cols-4 gap-3 mb-6">
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <p className="text-xl font-semibold text-gray-900">12</p>
+                  <p className="text-xs text-gray-500">Total</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <p className="text-xl font-semibold text-gray-500">4</p>
+                  <p className="text-xs text-gray-500">To do</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <p className="text-xl font-semibold" style={{ color: "#f59e0b" }}>5</p>
+                  <p className="text-xs text-gray-500">In progress</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <p className="text-xl font-semibold" style={{ color: "#10b981" }}>3</p>
+                  <p className="text-xs text-gray-500">Done</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {["Design homepage", "Write API docs", "Fix login bug"].map((task, i) => (
+                  <div key={i} className="flex items-center gap-3 p-3 rounded-lg border" style={{ borderColor: "#e5e7eb" }}>
+                    <div className="w-6 h-6 rounded flex items-center justify-center" style={{ backgroundColor: i === 2 ? "#d1fae5" : i === 1 ? "#fef3c7" : "#f3f4f6" }}>
+                      <CheckCircle2 className="w-3.5 h-3.5" style={{ color: i === 2 ? "#10b981" : i === 1 ? "#f59e0b" : "#6b7280" }} />
+                    </div>
+                    <span className="text-sm text-gray-700">{task}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
+        </motion.div>
+      </section>
 
-          {/* Animated connecting line - positioned behind nodes */}
-          <svg
-            className="absolute top-0 left-0 w-full h-8 pointer-events-none hidden md:block"
-            viewBox="0 0 100 10"
-            preserveAspectRatio="xMidYMid meet"
-          >
-            <motion.line
-              x1="16.666"
-              y1="5"
-              x2="83.333"
-              y2="5"
-              stroke="currentColor"
-              strokeWidth="0.3"
-              className="text-[--border]"
-              initial={{ pathLength: 0, opacity: 0 }}
-              animate={{ pathLength: 1, opacity: 1 }}
-              transition={{ duration: 1.5, delay: 0.5, ease: "easeInOut" }}
-              strokeDasharray="1"
-              strokeDashoffset="0"
-            />
-          </svg>
+      {/* Features */}
+      <section id="features" className="py-20 px-6 bg-white border-y" style={{ borderColor: "#e5e7eb" }}>
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-3">Everything you need</h2>
+            <p className="text-gray-500">Simple features that help you stay organized.</p>
+          </div>
+          <div className="grid md:grid-cols-3 lg:grid-cols-5 gap-6">
+            {features.map((feature, i) => (
+              <motion.div
+                key={i}
+                className="text-center"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+              >
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ backgroundColor: "#f0fdfa" }}>
+                  <feature.icon className="w-5 h-5" style={{ color: "#0d9488" }} />
+                </div>
+                <h3 className="font-medium text-gray-900 mb-1">{feature.title}</h3>
+                <p className="text-sm text-gray-500">{feature.description}</p>
+              </motion.div>
+            ))}
+          </div>
         </div>
-      </main>
+      </section>
+
+      {/* FAQ */}
+      <section id="faq" className="py-20 px-6">
+        <div className="max-w-2xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-3">Questions & Answers</h2>
+            <p className="text-gray-500">Common questions about PrimeDashboard.</p>
+          </div>
+          <div className="space-y-2">
+            {faqs.map((faq, i) => (
+              <div key={i} className="bg-white rounded-xl border overflow-hidden" style={{ borderColor: "#e5e7eb" }}>
+                <button
+                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                  className="w-full flex items-center justify-between p-4 text-left"
+                >
+                  <span className="font-medium text-gray-900">{faq.q}</span>
+                  <ChevronDown
+                    className={`w-5 h-5 text-gray-400 transition-transform ${openFaq === i ? "rotate-180" : ""}`}
+                  />
+                </button>
+                <AnimatePresence>
+                  {openFaq === i && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <p className="px-4 pb-4 text-gray-600">{faq.a}</p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="py-16 px-6 bg-white border-t" style={{ borderColor: "#e5e7eb" }}>
+        <div className="max-w-2xl mx-auto text-center">
+          <h2 className="text-2xl font-semibold text-gray-900 mb-3">Ready to get organized?</h2>
+          <p className="text-gray-500 mb-6">Start managing your tasks today. It's free.</p>
+          <Link href="/signup">
+            <Button size="lg">
+              Get Started
+              <ArrowRight className="ml-2 w-4 h-4" />
+            </Button>
+          </Link>
+        </div>
+      </section>
 
       {/* Footer */}
-      <footer className="relative z-10 w-full py-8 text-center">
-        <p className="text-sm text-[--muted]">
-          Made by <span className="text-[--ink] font-medium">Vansh Nagpal</span>
-        </p>
+      <footer className="border-t py-8 px-6" style={{ borderColor: "#e5e7eb" }}>
+        <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: "#0d9488" }}>
+              <span className="text-white font-semibold text-xs">P</span>
+            </div>
+            <span className="text-sm font-medium text-gray-700">PrimeDashboard</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <a href="#" className="text-gray-400 hover:text-gray-600 transition-colors">
+              <Github className="w-5 h-5" />
+            </a>
+            <a href="#" className="text-gray-400 hover:text-gray-600 transition-colors">
+              <Twitter className="w-5 h-5" />
+            </a>
+            <a href="#" className="text-gray-400 hover:text-gray-600 transition-colors">
+              <Linkedin className="w-5 h-5" />
+            </a>
+          </div>
+          <p className="text-sm text-gray-500">
+            Made by <span className="text-gray-700 font-medium">Vansh Nagpal</span>
+          </p>
+        </div>
       </footer>
     </div>
   );

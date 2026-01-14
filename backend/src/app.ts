@@ -9,6 +9,9 @@ import { errorHandler } from "./middleware/errorHandler";
 import { authRouter } from "./routes/auth";
 import { profileRouter } from "./routes/profile";
 import { taskRouter } from "./routes/tasks";
+import { shareRouter } from "./routes/share";
+import { notificationRouter } from "./routes/notifications";
+import aiRoutes from "./routes/ai";
 
 const app = express();
 
@@ -45,6 +48,9 @@ app.get("/health", (_req, res) => {
 app.use("/auth", authRouter);
 app.use("/me", profileRouter);
 app.use("/tasks", taskRouter);
+app.use("/", shareRouter);
+app.use("/notifications", notificationRouter);
+app.use("/ai", aiRoutes);
 
 app.use(errorHandler);
 
