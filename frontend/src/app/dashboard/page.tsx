@@ -435,7 +435,7 @@ export default function DashboardPage() {
     markReadMutation.mutate(id);
   };
 
-  const handleDismissNotification = (e: React.MouseEvent, id: string) => {
+  const handleDismissNotification = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     deleteNotificationMutation.mutate(id);
   };
