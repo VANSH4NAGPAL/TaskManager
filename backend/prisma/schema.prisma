@@ -21,6 +21,7 @@ model User {
   sharedTasks    TaskShare[]
   notifications  Notification[]
   defaultView    DefaultView    @default(LIST)
+  timezone       String?        @default("UTC")
 }
 
 // ... existing models ...
@@ -37,8 +38,13 @@ model Task {
   status      TaskStatus  @default(TODO)
   tags        String[]
   dueDate     DateTime?
-  archived    Boolean     @default(false)
+  reminders   Json?        // Array of { type: 'relative' | 'custom', value: number, unit: 'hours'|'days' }
+  recurrence  String?      // HOURLY, DAILY, WEEKLY, MONTHLY
+  isTimeBased Boolean      @default(false)
+  archived    Boolean      @default(false)
   archivedAt  DateTime?
+  deletedAt   DateTime?
+  
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)

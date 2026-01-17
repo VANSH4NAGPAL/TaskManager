@@ -82,6 +82,44 @@ notificationRouter.post(
     })
 );
 
+// Delete single notification
+notificationRouter.delete(
+    "/:id",
+    requireAuth,
+    asyncHandler(async (req: AuthRequest, res) => {
+        if (!req.userId) throw new HttpError(401, "Unauthorized");
+
+        const notification = await prisma.notification.findFirst({
+            where: { id: req.params.id, userId: req.userId },
+        });
+
+        if (!notification) {
+            throw new HttpError(404, "Notification not found");
+        }
+
+        await prisma.notification.delete({
+            where: { id: req.params.id },
+        });
+
+        res.status(204).send();
+    })
+);
+
+// Clear all notifications
+notificationRouter.delete(
+    "/clear/all",
+    requireAuth,
+    asyncHandler(async (req: AuthRequest, res) => {
+        if (!req.userId) throw new HttpError(401, "Unauthorized");
+
+        await prisma.notification.deleteMany({
+            where: { userId: req.userId },
+        });
+
+        res.status(204).send();
+    })
+);
+
 // Helper function to create notification (exported for use in other routes)
 export async function createNotification(params: {
     userId: string;

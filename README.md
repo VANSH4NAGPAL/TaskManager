@@ -1,4 +1,4 @@
-# PrimeDashboard - Scalable Task Management System
+# TM Dashboard - Scalable Task Management System
 
 <div align="center">
 
@@ -48,7 +48,7 @@ image optimization across client and academic projects
 
 ## 🎯 About the Project
 
-**PrimeDashboard** is a full-stack web application that combines a beautiful, minimal frontend with a robust backend to deliver a complete task management solution. Built with modern technologies and best practices, it showcases:
+**TM Dashboard** is a full-stack web application that combines a beautiful, minimal frontend with a robust backend to deliver a complete task management solution. Built with modern technologies and best practices, it showcases:
 
 - **Secure Authentication** with JWT tokens and HTTP-only refresh cookies
 - **Real-time Task Management** with CRUD operations, search, and filtering
@@ -99,6 +99,23 @@ This project showcases my ability to:
 - ✅ Hover effects and micro-interactions
 - ✅ Glass morphism effects on auth pages
 - ✅ Fully responsive (mobile, tablet, desktop)
+
+### 🤖 AI-Powered Intelligence
+- ✅ **Smart Task Breakdown**: AI generates subtasks for complex goals
+- ✅ **Real-time Streaming**: Typewriter effect for AI responses via SSE
+- ✅ **Context Awareness**: Understands task title/description for relevant suggestions
+- ✅ **Safety Guardrails**: Custom regex filters to prevent unsafe content
+
+### 👥 Advanced Collaboration
+- ✅ **Task Sharing**: Invite users via email to collaborate
+- ✅ **RBAC Permissions**: Granular `VIEWER` and `EDITOR` roles
+- ✅ **Real-time Notifications**: Alerts when tasks are assigned, edited, or completed
+- ✅ **Activity Log**: Track who changed what (implicitly via notifications)
+
+### 🛠️ Power User Tools
+- ✅ **Universal Export**: Download data in **PDF**, **CSV**, or **JSON** formats
+- ✅ **Trash Bin & Recovery**: Soft-delete system with 7-day restore window
+- ✅ **Keyboard Shortcuts**: Quick navigation (`C` to create, `CMD+K` to search)
 
 ### 🛡️ Security Features
 - ✅ Password hashing with bcrypt (10 rounds)
@@ -636,8 +653,18 @@ app.use((req, res, next) => {
 - [x] Connected to **PostgreSQL** database via Prisma
 
 ### Dashboard Features
-- [x] Display **user profile** (fetched from backend)
   - [x] Name, email, total tasks
+- [x] **AI Assistant**
+  - [x] Generate subtasks with Groq LLM
+  - [x] Stream responses in real-time
+- [x] **Collaboration**
+  - [x] Share tasks with `Viewer`/`Editor` permissions
+  - [x] Notifications system
+- [x] **Data Export**
+  - [x] Export to PDF, CSV, JSON
+- [x] **Trash System**
+  - [x] Soft delete with restore option
+  - [x] Auto-delete after 7 days
 - [x] **CRUD operations** on tasks
   - [x] Create new task with modal
   - [x] View all tasks

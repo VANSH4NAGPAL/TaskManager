@@ -30,6 +30,29 @@ async function getUserPermission(taskId: string, userId: string): Promise<"OWNER
     return null;
 }
 
+// Check if a user exists by email (for sharing)
+shareRouter.post(
+    "/check-user",
+    requireAuth,
+    asyncHandler(async (req: AuthRequest, res) => {
+        const { email } = req.body;
+        if (!email || typeof email !== "string") {
+            throw new HttpError(400, "Email is required");
+        }
+
+        const user = await prisma.user.findUnique({
+            where: { email },
+            select: { id: true, name: true, email: true }
+        });
+
+        if (!user) {
+            return res.json({ exists: false, user: null });
+        }
+
+        return res.json({ exists: true, user });
+    })
+);
+
 // Share a task with another user
 shareRouter.post(
     "/tasks/:taskId/share",
@@ -120,32 +143,49 @@ shareRouter.post(
             include: { user: { select: { id: true, name: true, email: true } } }
         });
 
-        // Notify owner about new collaborator
-        if (sharerPermission !== "OWNER" && actor) {
+        // Get all existing collaborators to notify
+        const existingShares = await prisma.taskShare.findMany({
+            where: { taskId, userId: { not: targetUser.id } }
+        });
+
+        // Notify all existing collaborators (owner + shared users) about the new addition
+        const usersToNotify: string[] = [];
+
+        // Add owner (if not the one sharing)
+        if (task.userId !== req.userId) {
+            usersToNotify.push(task.userId);
+        }
+
+        // Add all existing collaborators (except the sharer and new person)
+        for (const s of existingShares) {
+            if (s.userId !== req.userId) {
+                usersToNotify.push(s.userId);
+            }
+        }
+
+        // Send notifications to all existing collaborators
+        for (const userId of usersToNotify) {
             await createNotification({
-                userId: task.userId,
+                userId,
                 type: "COLLABORATOR_ADDED",
                 taskId: task.id,
                 taskTitle: task.title,
                 actorId: req.userId,
-                actorName: actor.name,
-                message: `${actor.name} shared "${task.title}" with ${targetUser.name}`,
+                actorName: actor?.name || "Someone",
+                message: `${actor?.name || "Someone"} added ${targetUser.name} to "${task.title}"`,
             });
         }
 
-        // Notify the task owner if someone else shared
-        if (sharerPermission === "OWNER" || actor) {
-            // Notify the target user
-            await createNotification({
-                userId: targetUser.id,
-                type: "TASK_SHARED",
-                taskId: task.id,
-                taskTitle: task.title,
-                actorId: req.userId,
-                actorName: actor?.name || "Someone",
-                message: `${actor?.name || "Someone"} shared "${task.title}" with you`,
-            });
-        }
+        // Also notify the target user that they were added
+        await createNotification({
+            userId: targetUser.id,
+            type: "TASK_SHARED",
+            taskId: task.id,
+            taskTitle: task.title,
+            actorId: req.userId,
+            actorName: actor?.name || "Someone",
+            message: `${actor?.name || "Someone"} shared "${task.title}" with you`,
+        });
 
         res.status(201).json({ share });
     })
