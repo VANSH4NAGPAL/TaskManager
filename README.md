@@ -704,22 +704,26 @@ app.use((req, res, next) => {
 ## 📸 Screenshots
 
 ### Landing Page
-<img width="2557" height="1266" alt="image" src="https://github.com/user-attachments/assets/d57452c2-71bf-4806-9da6-9ff053b59134" />
+<img width="2558" height="1272" alt="image" src="https://github.com/user-attachments/assets/652f704a-6670-400a-9752-f403c65b0b60" />
+
 
 
 
 ### Authentication
-<img width="2559" height="1268" alt="image" src="https://github.com/user-attachments/assets/c4214d6f-a0bc-460d-a200-25b7e37222b7" />
+<img width="2559" height="1268" alt="image" src="https://github.com/user-attachments/assets/edefec4d-91c4-4293-9998-da4a1b883240" />
+
 
 
 
 ### Dashboard
-<img width="2559" height="1267" alt="image" src="https://github.com/user-attachments/assets/0064df44-56a1-4423-906a-6d1c1823b982" />
+<img width="2559" height="1264" alt="image" src="https://github.com/user-attachments/assets/57c5ab15-fc4e-4307-af46-c217390cbe69" />
+
 
 
 
 ### Task Management
-<img width="485" height="534" alt="image" src="https://github.com/user-attachments/assets/92291337-338a-4b77-9203-87cac951caf4" />
+<img width="1401" height="1058" alt="image" src="https://github.com/user-attachments/assets/41bdddf1-c672-4a90-b262-3f526aedc990" />
+
 
 
 
