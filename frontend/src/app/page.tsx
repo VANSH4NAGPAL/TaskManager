@@ -16,6 +16,7 @@ import {
   ChevronDown,
   Download,
   Archive,
+  Globe,
 } from "lucide-react";
 
 export default function Home() {
@@ -322,13 +323,16 @@ export default function Home() {
             <span className="text-sm font-medium text-gray-700">TM Dashboard</span>
           </div>
           <div className="flex items-center gap-4">
-            <a href="#" className="text-gray-400 hover:text-gray-600 transition-colors">
+            <a href="https://vanshdev.netlify.app/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-gray-600 transition-colors" title="Portfolio">
+              <Globe className="w-5 h-5" />
+            </a>
+            <a href="https://github.com/VANSH4NAGPAL" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-gray-600 transition-colors" title="GitHub">
               <Github className="w-5 h-5" />
             </a>
-            <a href="#" className="text-gray-400 hover:text-gray-600 transition-colors">
+            <a href="https://x.com/VanshNOk" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-gray-600 transition-colors" title="X (Twitter)">
               <Twitter className="w-5 h-5" />
             </a>
-            <a href="#" className="text-gray-400 hover:text-gray-600 transition-colors">
+            <a href="https://www.linkedin.com/in/vansh-nagpal/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-gray-600 transition-colors" title="LinkedIn">
               <Linkedin className="w-5 h-5" />
             </a>
           </div>
