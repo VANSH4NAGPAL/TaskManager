@@ -46,9 +46,9 @@ export function LoaderScreen() {
           className="w-10 h-10 rounded-xl flex items-center justify-center"
           style={{ backgroundColor: '#0d9488' }}
         >
-          <span className="text-white font-bold text-lg">P</span>
+          <span className="text-white font-bold text-sm tracking-tighter">TM</span>
         </div>
-        <span className="text-xl font-semibold">PrimeDashboard</span>
+        <span className="text-xl font-semibold">TM Dashboard</span>
       </Link>
 
       {/* Loader */}

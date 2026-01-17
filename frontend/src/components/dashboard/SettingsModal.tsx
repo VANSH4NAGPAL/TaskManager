@@ -6,13 +6,31 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getProfile, updateProfile } from "../../lib/api";
 import { Loader2, User, Settings, LayoutList, KanbanSquare } from "lucide-react";
 import { toast } from "sonner";
+import { CustomSelect } from "../ui/select";
+
+const TIMEZONE_OPTIONS = [
+    { value: "UTC", label: "UTC (Coordinated Universal Time)" },
+    { value: "America/New_York", label: "Eastern Time (US & Canada)" },
+    { value: "America/Chicago", label: "Central Time (US & Canada)" },
+    { value: "America/Denver", label: "Mountain Time (US & Canada)" },
+    { value: "America/Los_Angeles", label: "Pacific Time (US & Canada)" },
+    { value: "Europe/London", label: "Europe: London" },
+    { value: "Europe/Paris", label: "Europe: Paris" },
+    { value: "Europe/Berlin", label: "Europe: Berlin" },
+    { value: "Asia/Kolkata", label: "Asia: India Standard Time (IST)" },
+    { value: "Asia/Dubai", label: "Asia: Dubai" },
+    { value: "Asia/Singapore", label: "Asia: Singapore" },
+    { value: "Asia/Tokyo", label: "Asia: Tokyo" },
+    { value: "Australia/Sydney", label: "Australia: Sydney" },
+];
 
 interface SettingsModalProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    defaultTab?: "profile" | "preferences";
 }
 
-export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
+export function SettingsModal({ open, onOpenChange, defaultTab = "profile" }: SettingsModalProps) {
     const queryClient = useQueryClient();
     const { data: user, isLoading } = useQuery({
         queryKey: ["profile"],
@@ -22,12 +40,20 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
     const [name, setName] = useState("");
     const [defaultView, setDefaultView] = useState<"LIST" | "BOARD">("LIST");
-    const [activeTab, setActiveTab] = useState<"profile" | "preferences">("profile");
+    const [timezone, setTimezone] = useState("UTC");
+    const [activeTab, setActiveTab] = useState<"profile" | "preferences">(defaultTab);
+
+    useEffect(() => {
+        if (open) {
+            setActiveTab(defaultTab);
+        }
+    }, [open, defaultTab]);
 
     useEffect(() => {
         if (user) {
             setName(user.name);
             setDefaultView(user.defaultView || "LIST");
+            setTimezone(user.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC");
         }
     }, [user]);
 
@@ -35,6 +61,8 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
         mutationFn: updateProfile,
         onSuccess: (data) => {
             queryClient.setQueryData(["profile"], data);
+            queryClient.setQueryData(["me"], data); // Optimistic update for other components
+            queryClient.invalidateQueries({ queryKey: ["me"] });
             toast.success("Settings updated");
             onOpenChange(false);
         },
@@ -47,6 +75,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
         updateMutation.mutate({
             name,
             defaultView,
+            timezone,
         });
     };
 
@@ -99,7 +128,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                     )}
 
                     {activeTab === "preferences" && (
-                        <div className="space-y-4">
+                        <div className="space-y-6">
                             <div className="space-y-3">
                                 <label className="text-sm font-medium text-gray-700">Default View</label>
                                 <div className="grid grid-cols-2 gap-2">
@@ -126,6 +155,20 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                                 </div>
                                 <p className="text-xs text-gray-500">
                                     This view will be selected automatically when you login.
+                                </p>
+                            </div>
+
+                            <div className="space-y-3">
+                                <label className="text-sm font-medium text-gray-700">Timezone</label>
+                                <div className="w-full">
+                                    <CustomSelect
+                                        value={timezone}
+                                        onChange={setTimezone}
+                                        options={TIMEZONE_OPTIONS}
+                                    />
+                                </div>
+                                <p className="text-xs text-gray-500">
+                                    Used for task scheduling and reminders.
                                 </p>
                             </div>
                         </div>

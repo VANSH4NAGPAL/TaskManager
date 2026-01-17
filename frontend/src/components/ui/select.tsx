@@ -15,9 +15,10 @@ interface CustomSelectProps {
     options: SelectOption[];
     disabled?: boolean;
     size?: "sm" | "md";
+    className?: string;
 }
 
-export function CustomSelect({ value, onChange, options, disabled, size = "md" }: CustomSelectProps) {
+export function CustomSelect({ value, onChange, options, disabled, size = "md", className = "" }: CustomSelectProps) {
     const [isOpen, setIsOpen] = useState(false);
     const selectRef = useRef<HTMLDivElement>(null);
 
@@ -51,6 +52,7 @@ export function CustomSelect({ value, onChange, options, disabled, size = "md" }
                 className={`
           flex items-center justify-between gap-2 
           ${sizeClasses}
+          ${className}
           font-medium border rounded-lg bg-white 
           cursor-pointer transition-all
           hover:bg-gray-50 
@@ -73,7 +75,7 @@ export function CustomSelect({ value, onChange, options, disabled, size = "md" }
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: -4 }}
                         transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                        className="absolute right-0 mt-1.5 w-full min-w-[100px] bg-white rounded-lg border shadow-lg overflow-hidden z-50"
+                        className="absolute right-0 mt-1.5 w-full min-w-[100px] bg-white rounded-lg border shadow-lg overflow-hidden z-50 max-h-60 overflow-y-auto"
                         style={{ borderColor: "#e5e7eb" }}
                     >
                         {options.map((option) => (

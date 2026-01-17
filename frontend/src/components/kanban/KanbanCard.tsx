@@ -6,6 +6,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { Task } from "../../lib/api";
 import { Pencil, Trash2, Clock, CheckCircle2, Circle, Share2, FileText } from "lucide-react";
 import { motion } from "framer-motion";
+import { DeadlineDisplay } from "../ui/UrgencyBadge";
 
 interface KanbanCardProps {
     task: Task;
@@ -101,8 +102,18 @@ export function KanbanCard({ task, onEdit, onDelete, onShare }: KanbanCardProps)
             </div>
 
             <div className="mb-3">
+                {/* Deadline Badge - Only show for timed tasks */}
+                {task.dueDate && task.isTimeBased && (
+                    <div className="mb-2">
+                        <DeadlineDisplay
+                            dueDate={task.dueDate}
+                            status={task.status}
+                            showTime={false}
+                        />
+                    </div>
+                )}
                 <p className={`text-xs text-gray-500 whitespace-pre-wrap ${isExpanded ? "" : "line-clamp-2"}`}>
-                    {task.description}
+                    {task.description.replace(/<[^>]*>?/gm, '')}
                 </p>
                 {task.description.length > 60 && (
                     <button

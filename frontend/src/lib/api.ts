@@ -33,7 +33,7 @@ async function rawFetch(path: string, options: RequestInit = {}) {
 
   if (!res.ok) {
     const errorBody = await res.json().catch(() => ({ message: res.statusText }));
-    const err: any = new Error(errorBody.message || "Request failed");
+    const err = new Error(errorBody.message || "Request failed") as Error & { status?: number; details?: unknown };
     err.status = res.status;
     err.details = errorBody.details;
     throw err;
@@ -58,17 +58,28 @@ async function authFetch(path: string, options: RequestInit = {}) {
 
   try {
     return await rawFetch(path, withAuth);
-  } catch (err: any) {
-    if (err.status === 401) {
-      await refreshAccessToken();
-      const retry = {
-        ...options,
-        headers: {
-          ...(options.headers as Record<string, string>),
-          Authorization: inMemoryAccessToken ? `Bearer ${inMemoryAccessToken}` : "",
-        },
-      };
-      return await rawFetch(path, retry);
+  } catch (err) {
+    const error = err as { status?: number };
+    if (error.status === 401) {
+      try {
+        await refreshAccessToken();
+        const retry = {
+          ...options,
+          headers: {
+            ...(options.headers as Record<string, string>),
+            Authorization: inMemoryAccessToken ? `Bearer ${inMemoryAccessToken}` : "",
+          },
+        };
+        return await rawFetch(path, retry);
+      } catch (refreshErr) {
+        // Refresh failed, user is logged out
+        setAccessToken(null);
+        if (typeof window !== "undefined") {
+          // Optional: redirect to login or let the UI handle the null user
+          // window.location.href = "/login"; 
+        }
+        throw refreshErr;
+      }
     }
     throw err;
   }
@@ -123,7 +134,7 @@ export async function getProfile() {
   return data.user;
 }
 
-export async function updateProfile(input: { name?: string; defaultView?: "LIST" | "BOARD" }) {
+export async function updateProfile(input: { name?: string; defaultView?: "LIST" | "BOARD"; timezone?: string }) {
   const data = await authFetch("/me", { method: "PATCH", body: JSON.stringify(input) });
   return data.user;
 }
@@ -134,6 +145,109 @@ export async function generateSubtasks(title: string, description?: string) {
     body: JSON.stringify({ title, description }),
   });
   return data as { subtasks: string; tags: string[] };
+}
+
+/**
+ * Stream AI-generated subtasks using Server-Sent Events
+ * This provides real-time text display as the AI generates content
+ * 
+ * @param title - The task title
+ * @param description - Optional context for the AI
+ * @param onChunk - Callback called with each new text chunk
+ * @returns The final sanitized content
+ */
+export async function generateSubtasksStream(
+  title: string,
+  description: string | undefined,
+  onChunk: (chunk: string) => void
+): Promise<string> {
+  // Ensure we have a token
+  if (!inMemoryAccessToken && typeof window !== "undefined") {
+    loadAccessTokenFromStorage();
+  }
+
+  const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+
+  const response = await fetch(`${API_URL}/ai/generate-subtasks-stream`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: inMemoryAccessToken ? `Bearer ${inMemoryAccessToken}` : "",
+    },
+    credentials: "include",
+    body: JSON.stringify({ title, description }),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({ message: response.statusText }));
+    throw new Error(errorBody.error || errorBody.message || "Request failed");
+  }
+
+  if (!response.body) {
+    throw new Error("No response body");
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let fullContent = "";
+  let finalContent = "";
+  let serverError: string | null = null;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+
+      if (done) {
+        break;
+      }
+
+      const text = decoder.decode(value, { stream: true });
+
+      const lines = text.split("\n");
+
+      for (const line of lines) {
+        if (line.startsWith("data: ")) {
+          const data = line.slice(6).trim();
+
+          if (data === "[DONE]") {
+            continue;
+          }
+
+          if (!data) continue;
+
+          try {
+            const parsed = JSON.parse(data);
+
+            if (parsed.error) {
+              serverError = parsed.error;
+              continue;
+            }
+
+            if (parsed.final) {
+              finalContent = parsed.final;
+            }
+
+            if (parsed.content) {
+              fullContent += parsed.content;
+              onChunk(parsed.content);
+            }
+          } catch {
+            // Ignore JSON parse errors for partial chunks
+          }
+        }
+      }
+    }
+  } catch (err) {
+    throw err;
+  } finally {
+    reader.releaseLock();
+  }
+
+  if (serverError && !fullContent && !finalContent) {
+    throw new Error(serverError);
+  }
+
+  return finalContent || fullContent;
 }
 
 // Types
@@ -155,8 +269,22 @@ export interface Task {
   status: TaskStatus;
   tags: string[];
   dueDate: string | null;
+  recurrence?: string | null;
+  reminders?: Array<{
+    type: "relative" | "custom";
+    beforeMinutes?: number;
+    customDate?: string;
+    unit?: string;
+    // Legacy fields for backward compatibility if needed
+    value?: number;
+    repeat?: boolean;
+    repeatInterval?: string;
+    repeatCount?: number;
+  }>;
+  isTimeBased?: boolean;
   archived: boolean;
   archivedAt: string | null;
+  deletedAt: string | null;
   createdAt: string;
   updatedAt: string;
   isOwner?: boolean;
@@ -208,6 +336,25 @@ export async function deleteTask(id: string) {
   await authFetch(`/tasks/${id}`, { method: "DELETE" });
 }
 
+// Trash Bin
+export async function getTrashedTasks() {
+  const data = await authFetch("/tasks/trash/all");
+  return data.tasks as Task[];
+}
+
+export async function emptyTrash() {
+  await authFetch("/tasks/trash/empty", { method: "DELETE" });
+}
+
+export async function restoreTask(id: string) {
+  const data = await authFetch(`/tasks/${id}/restore`, { method: "POST" });
+  return data.task as Task;
+}
+
+export async function permanentDeleteTask(id: string) {
+  await authFetch(`/tasks/${id}/permanent`, { method: "DELETE" });
+}
+
 // Archive
 export async function archiveTask(id: string) {
   const data = await authFetch(`/tasks/${id}/archive`, { method: "POST" });
@@ -236,6 +383,11 @@ export function downloadBlob(blob: Blob, filename: string) {
 }
 
 // Sharing
+export async function checkUserByEmail(email: string) {
+  const data = await authFetch("/check-user", { method: "POST", body: JSON.stringify({ email }) });
+  return data as { exists: boolean; user: { id: string; name: string; email: string } | null };
+}
+
 export async function shareTask(taskId: string, email: string, permission: Permission) {
   const data = await authFetch(`/tasks/${taskId}/share`, { method: "POST", body: JSON.stringify({ email, permission }) });
   return data;
@@ -268,6 +420,14 @@ export async function getUnreadCount() {
 
 export async function markNotificationRead(id: string) {
   await authFetch(`/notifications/${id}/read`, { method: "POST" });
+}
+
+export async function deleteNotification(id: string) {
+  await authFetch(`/notifications/${id}`, { method: "DELETE" });
+}
+
+export async function clearAllNotifications() {
+  await authFetch("/notifications/clear/all", { method: "DELETE" });
 }
 
 export async function markAllNotificationsRead() {

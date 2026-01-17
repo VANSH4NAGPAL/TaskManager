@@ -78,9 +78,9 @@ export default function SignupPage() {
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 relative z-10">
           <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center">
-            <span className="text-teal-600 font-bold text-lg">P</span>
+            <span className="text-teal-600 font-bold text-sm tracking-tighter">TM</span>
           </div>
-          <span className="text-xl font-semibold text-white">PrimeDashboard</span>
+          <span className="text-xl font-semibold text-white">TM Dashboard</span>
         </Link>
 
         {/* Content */}
@@ -135,7 +135,7 @@ export default function SignupPage() {
 
         {/* Footer */}
         <p className="text-sm text-white/60 relative z-10">
-          © 2026 PrimeDashboard. All rights reserved.
+          © 2026 TM Dashboard. All rights reserved.
         </p>
       </div>
 
@@ -170,9 +170,9 @@ export default function SignupPage() {
                 className="w-10 h-10 rounded-xl flex items-center justify-center"
                 style={{ backgroundColor: '#0d9488' }}
               >
-                <span className="text-white font-bold text-lg">P</span>
+                <span className="text-white font-bold text-sm tracking-tighter">TM</span>
               </div>
-              <span className="text-xl font-semibold text-gray-900">PrimeDashboard</span>
+              <span className="text-xl font-semibold text-gray-900">TM Dashboard</span>
             </Link>
           </div>
 

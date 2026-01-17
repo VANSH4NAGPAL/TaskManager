@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "PrimeDashboard - Organize Your Work Simply",
-    template: "%s | PrimeDashboard",
+    default: "TM Dashboard - Organize Your Work Simply",
+    template: "%s | TM Dashboard",
   },
   description: "A minimal task management dashboard with secure authentication. Organize your tasks, track progress, and boost productivity.",
   keywords: ["task management", "dashboard", "productivity", "tasks", "project management", "todo"],
@@ -25,13 +25,13 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    siteName: "PrimeDashboard",
-    title: "PrimeDashboard - Organize Your Work Simply",
+    siteName: "TM Dashboard",
+    title: "TM Dashboard - Organize Your Work Simply",
     description: "A minimal task management dashboard with secure authentication.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "PrimeDashboard - Organize Your Work Simply",
+    title: "TM Dashboard - Organize Your Work Simply",
     description: "A minimal task management dashboard with secure authentication.",
   },
   robots: {

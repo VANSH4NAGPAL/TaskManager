@@ -1,19 +1,28 @@
 "use client";
 
+import { TrashBin } from "@/components/dashboard/TrashBin";
+import { NotificationPanel } from "@/components/dashboard/NotificationPanel";
+
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence, Variants } from "framer-motion";
 import { KanbanBoard } from "../../components/kanban/KanbanBoard";
 import { TaskListItem } from "../../components/dashboard/TaskListItem";
+import { TaskViewModal } from "../../components/dashboard/TaskViewModal";
+import { CreateTaskModal } from "../../components/dashboard/CreateTaskModal";
+import { ShortcutsModal } from "../../components/dashboard/ShortcutsModal";
+import { CalendarView } from "../../components/dashboard/CalendarView";
 import { useCurrentUser, useLogout } from "../../hooks/useAuth";
-import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
-import { TextArea } from "../../components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { CountdownButton } from "@/components/ui/CountdownButton";
+import { Input } from "@/components/ui/input";
+
 import { Modal } from "../../components/ui/modal";
 import { LoaderScreen, Loader } from "../../components/ui/loader";
 import { CustomSelect } from "../../components/ui/select";
 import { SettingsModal } from "../../components/dashboard/SettingsModal";
+import { UrgencyBadge } from "../../components/ui/UrgencyBadge";
 import {
   Task,
   TaskStatus,
@@ -26,16 +35,27 @@ import {
   deleteTask,
   archiveTask,
   unarchiveTask,
-  exportTasks,
-  downloadBlob,
   shareTask,
   getCollaborators,
   updateCollaboratorPermission,
   removeCollaborator,
   getNotifications,
   markAllNotificationsRead,
+  markNotificationRead,
+  deleteNotification,
+  clearAllNotifications,
+  exportTasks,
   generateSubtasks,
-} from "../../lib/api";
+  generateSubtasksStream,
+  downloadBlob,
+  checkUserByEmail,
+  getUnreadCount,
+  restoreTask,
+  permanentDeleteTask,
+  type Task as TaskType,
+  type TaskStatus as TaskStatusType,
+  type Permission as PermissionType
+} from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -63,6 +83,8 @@ import {
   KanbanSquare,
   Settings,
   Wand2,
+  CalendarDays,
+  Calendar,
 } from "lucide-react";
 
 const statusOptions: { label: string; value: TaskStatus; color: string; bgColor: string }[] = [
@@ -110,15 +132,54 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<TabType>("my-tasks");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<FilterType>("ALL");
+  const [statusFilter, setStatusFilter] = useState<TaskStatus[]>([]);
   const [openModal, setOpenModal] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
+  const [viewing, setViewing] = useState<Task | null>(null); // New: for view modal
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
-  const [draft, setDraft] = useState({ title: "", description: "", tags: "", status: "TODO" as TaskStatus });
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
-  const [viewMode, setViewMode] = useState<"LIST" | "BOARD">("LIST");
+  const [viewMode, setViewMode] = useState<"LIST" | "BOARD" | "CALENDAR">("LIST");
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<"profile" | "preferences">("profile");
+
+  // Shortcuts
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if input/textarea is focused or if a modal (CreateTask/TaskView) is open (unless it's just Shortcuts modal we are toggling)
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        (e.target as HTMLElement).isContentEditable
+      ) {
+        return;
+      }
+
+      // Create Task: C (Only if no other modal is open)
+      if (e.key.toLowerCase() === "c" && !e.metaKey && !e.ctrlKey && !openModal && !viewing) {
+        e.preventDefault();
+        setOpenModal(true);
+      }
+
+      // Shortcuts Modal: Shift + ?
+      if (e.key === "?" && e.shiftKey) {
+        e.preventDefault();
+        setShortcutsOpen(prev => !prev);
+      }
+
+      // Search: Ctrl/Cmd + K
+      if (e.key.toLowerCase() === "k" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        const searchInput = document.querySelector('input[placeholder*="Search"]') as HTMLInputElement;
+        if (searchInput) searchInput.focus();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [openModal, viewing]);
+
 
   // Set default view from user profile
   useEffect(() => {
@@ -129,9 +190,11 @@ export default function DashboardPage() {
 
   // Share modal
   const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [clearNotifsConfirm, setClearNotifsConfirm] = useState(false);
   const [sharingTask, setSharingTask] = useState<Task | null>(null);
   const [shareEmail, setShareEmail] = useState("");
   const [sharePermission, setSharePermission] = useState<Permission>("VIEWER");
+
 
   // Dropdowns
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -186,8 +249,9 @@ export default function DashboardPage() {
   const notificationsQuery = useQuery({
     queryKey: ["notifications"],
     queryFn: getNotifications,
-    enabled: !!user && showNotifications,
+    enabled: !!user,
     staleTime: 10000,
+    refetchInterval: 30000, // Check for new notifications every 30 seconds
   });
 
   const collaboratorsQuery = useQuery({
@@ -202,8 +266,8 @@ export default function DashboardPage() {
   const filteredTasks = useMemo(() => {
     let tasks = activeTab === "my-tasks" ? allMyTasks : activeTab === "archived" ? (archivedQuery.data ?? []) : (sharedQuery.data ?? []);
 
-    if (activeTab === "my-tasks" && statusFilter !== "ALL") {
-      tasks = tasks.filter(t => t.status === statusFilter);
+    if (activeTab === "my-tasks" && statusFilter.length > 0) {
+      tasks = tasks.filter(t => statusFilter.includes(t.status));
     }
 
     if (debouncedSearch) {
@@ -213,6 +277,20 @@ export default function DashboardPage() {
 
     return tasks;
   }, [activeTab, allMyTasks, archivedQuery.data, sharedQuery.data, statusFilter, debouncedSearch]);
+
+  // Kanban tasks should NOT be filtered by status, otherwise columns disappear
+  const kanbanTasks = useMemo(() => {
+    let tasks = activeTab === "my-tasks" ? allMyTasks : activeTab === "archived" ? (archivedQuery.data ?? []) : (sharedQuery.data ?? []);
+
+    // Skip status filter for Kanban
+
+    if (debouncedSearch) {
+      const q = debouncedSearch.toLowerCase();
+      tasks = tasks.filter(t => t.title.toLowerCase().includes(q) || t.description.toLowerCase().includes(q));
+    }
+
+    return tasks;
+  }, [activeTab, allMyTasks, archivedQuery.data, sharedQuery.data, debouncedSearch]);
 
   // Stats
   const stats = useMemo(() => {
@@ -246,10 +324,7 @@ export default function DashboardPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["tasks"] }),
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: deleteTask,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["tasks"] }),
-  });
+
 
   const archiveMutation = useMutation({
     mutationFn: archiveTask,
@@ -295,21 +370,91 @@ export default function DashboardPage() {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: deleteTask,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: ["trash"] });
+      setTaskToDelete(null);
+    },
+  });
+
+  const restoreMutation = useMutation({
+    mutationFn: restoreTask,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: ["trash"] });
+    }
+  });
+
+  const permanentDeleteMutation = useMutation({
+    mutationFn: permanentDeleteTask,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["trash"] });
+      setTaskToDelete(null);
+    }
+  });
+
   const markAllReadMutation = useMutation({
     mutationFn: markAllNotificationsRead,
     onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
   });
 
+  const deleteNotificationMutation = useMutation({
+    mutationFn: deleteNotification,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["notifications"] });
+      qc.invalidateQueries({ queryKey: ["unreadCount"] });
+    }
+  });
+
+  const markReadMutation = useMutation({
+    mutationFn: markNotificationRead,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["notifications"] });
+      qc.invalidateQueries({ queryKey: ["unreadCount"] });
+    }
+  });
+
+  const clearAllNotificationsMutation = useMutation({
+    mutationFn: clearAllNotifications,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["notifications"] });
+      qc.invalidateQueries({ queryKey: ["unreadCount"] });
+    }
+  });
+
   // Handlers
+  const handleClearAllNotifications = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setClearNotifsConfirm(true);
+  };
+
+  const handleMarkRead = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    markReadMutation.mutate(id);
+  };
+
+  const handleDismissNotification = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    deleteNotificationMutation.mutate(id);
+  };
+
   const openCreate = () => {
     setEditing(null);
-    setDraft({ title: "", description: "", tags: "", status: "TODO" });
+    setViewing(null);
     setOpenModal(true);
   };
 
+  // Open view modal (clicking on a task)
+  const openView = (task: Task) => {
+    setViewing(task);
+  };
+
+  // Open edit modal (from view modal or directly)
   const openEdit = (task: Task) => {
+    setViewing(null);
     setEditing(task);
-    setDraft({ title: task.title, description: task.description, tags: task.tags.join(", "), status: task.status });
     setOpenModal(true);
   };
 
@@ -320,28 +465,57 @@ export default function DashboardPage() {
     setSharePermission("VIEWER");
   };
 
-  const handleSave = async () => {
-    if (!draft.title || !draft.description) {
-      toast.error("Title and description are required");
-      return;
-    }
-    const payload = {
-      title: draft.title,
-      description: draft.description,
-      tags: draft.tags.split(",").map(t => t.trim()).filter(Boolean),
-      status: draft.status,
-    };
+  const handleTaskSubmit = async (data: any) => {
     try {
       if (editing) {
-        await updateMutation.mutateAsync({ id: editing.id, data: payload });
+        await updateMutation.mutateAsync({ id: editing.id, data });
         toast.success("Task updated");
       } else {
-        await createMutation.mutateAsync(payload);
+        const newTask = await createMutation.mutateAsync(data);
         toast.success("Task created");
+
+        // Handle Share on Create (Enhanced Flow)
+        if (data.pendingCollaborators && Array.isArray(data.pendingCollaborators) && data.pendingCollaborators.length > 0) {
+          // We use Promise.allSettled to ensure one failure doesn't stop others (though typically we want them all)
+          // or just simple loop. 
+          await Promise.allSettled(data.pendingCollaborators.map((c: any) =>
+            shareMutation.mutateAsync({
+              taskId: newTask.id,
+              email: c.email,
+              permission: c.permission
+            })
+          ));
+          toast.success(`Invites sent to ${data.pendingCollaborators.length} collaborators`);
+        }
       }
       setOpenModal(false);
     } catch (err: any) {
       toast.error(err?.message || "Save failed");
+    }
+  };
+
+  const handleAI = async (title: string, userPrompt: string) => {
+    try {
+      const res = await generateSubtasks(title, userPrompt);
+      return res.subtasks;
+    } catch (err) {
+      toast.error("Failed to generate");
+      throw err;
+    }
+  };
+
+  // Streaming AI handler for real-time text display
+  const handleAIStream = async (
+    title: string,
+    userPrompt: string,
+    onChunk: (chunk: string) => void
+  ): Promise<string> => {
+    try {
+      const result = await generateSubtasksStream(title, userPrompt, onChunk);
+      return result;
+    } catch (err) {
+      toast.error("Failed to generate");
+      throw err;
     }
   };
 
@@ -369,6 +543,17 @@ export default function DashboardPage() {
 
   const handleShare = async () => {
     if (!sharingTask || !shareEmail) return;
+
+    // Validation
+    if (user?.email === shareEmail) {
+      toast.error("You cannot invite yourself");
+      return;
+    }
+    if (collaboratorsQuery.data?.collaborators.some(c => c.email === shareEmail)) {
+      toast.error("User is already a collaborator");
+      return;
+    }
+
     await shareMutation.mutateAsync({ taskId: sharingTask.id, email: shareEmail, permission: sharePermission });
   };
 
@@ -382,36 +567,7 @@ export default function DashboardPage() {
     setShowExportMenu(false);
   };
 
-  const handleGenerate = async () => {
-    if (!draft.title) {
-      toast.error("Please enter a title first");
-      return;
-    }
-    setIsGenerating(true);
-    try {
-      const { subtasks, tags } = await generateSubtasks(draft.title, draft.description);
 
-      setDraft(prev => {
-        const newDescription = prev.description ? `${prev.description}\n\n${subtasks}` : subtasks;
-
-        // Merge tags
-        const existingTags = prev.tags.split(",").map(t => t.trim()).filter(Boolean);
-        const newTags = [...new Set([...existingTags, ...tags])];
-
-        return {
-          ...prev,
-          description: newDescription,
-          tags: newTags.join(", ")
-        };
-      });
-
-      toast.success("AI generated subtasks and tags!");
-    } catch (err) {
-      toast.error("Failed to generate details");
-    } finally {
-      setIsGenerating(false);
-    }
-  };
 
   const handleNotificationClick = (n: Notification) => {
     setShowNotifications(false);
@@ -421,14 +577,8 @@ export default function DashboardPage() {
     const task = allKnownTasks.find(t => t.id === n.taskId);
 
     if (task) {
-      if (canEdit(task)) {
-        openEdit(task);
-      } else {
-        // Open in view mode
-        setEditing(task);
-        if (!task.archived) setDraft({ title: task.title, description: task.description, tags: task.tags.join(", "), status: task.status });
-        setOpenModal(true);
-      }
+      // Open in view mode regardless of permissions - consistency
+      openView(task);
     } else {
       toast.error("Task not found or unavailable");
     }
@@ -449,12 +599,12 @@ export default function DashboardPage() {
     <div className="min-h-screen flex flex-col bg-dots" style={{ backgroundColor: "#fafafa" }}>
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white border-b" style={{ borderColor: "#e5e7eb" }}>
-        <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: "#0d9488" }}>
-              <span className="text-white font-semibold text-sm">P</span>
+              <span className="text-white font-semibold text-[10px] tracking-tighter">TM</span>
             </div>
-            <span className="font-medium text-gray-900">PrimeDashboard</span>
+            <span className="font-medium text-gray-900">TM Dashboard</span>
           </Link>
 
           <div className="flex items-center gap-1">
@@ -532,54 +682,19 @@ export default function DashboardPage() {
               </button>
               <AnimatePresence>
                 {showNotifications && (
-                  <motion.div
-                    variants={dropdownVariants}
-                    initial="hidden"
-                    animate="visible"
-                    exit="exit"
-                    className="absolute right-0 mt-2 w-80 bg-white rounded-xl border shadow-xl z-50 overflow-hidden"
-                    style={{ borderColor: "#e5e7eb" }}
-                  >
-                    <div className="p-3 border-b flex items-center justify-between" style={{ borderColor: "#e5e7eb" }}>
-                      <span className="font-semibold text-gray-900 text-sm">Notifications</span>
-                      {unreadCount > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => markAllReadMutation.mutate()}
-                          className="text-xs font-medium text-teal-600 hover:text-teal-700 transition-colors"
-                        >
-                          Mark all read
-                        </button>
-                      )}
-                    </div>
-                    <div className="max-h-72 overflow-y-auto">
-                      {notificationsQuery.isLoading ? (
-                        <div className="p-6 flex justify-center">
-                          <Loader size="sm" />
-                        </div>
-                      ) : notifications.length === 0 ? (
-                        <div className="p-6 text-center">
-                          <Bell className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                          <p className="text-sm text-gray-500">No notifications yet</p>
-                        </div>
-                      ) : (
-                        notifications.slice(0, 10).map((n) => (
-                          <div
-                            key={n.id}
-                            onClick={() => handleNotificationClick(n)}
-                            className={`px-4 py-3 border-b last:border-0 transition-colors cursor-pointer hover:bg-gray-50 ${n.read ? "bg-white" : "bg-teal-50/60"
-                              }`}
-                            style={{ borderColor: "#f3f4f6" }}
-                          >
-                            <p className="text-sm text-gray-700 leading-relaxed"><span className="font-semibold text-gray-900">{n.taskTitle}</span>: {n.message}</p>
-                            <p className="text-xs text-gray-400 mt-1">{new Date(n.createdAt).toLocaleString()}</p>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </motion.div>
+                  <NotificationPanel
+                    notifications={notifications}
+                    onMarkRead={handleMarkRead}
+                    onDismiss={handleDismissNotification}
+                    onClearAll={handleClearAllNotifications}
+                    onItemClick={handleNotificationClick}
+                    clearConfirmOpen={clearNotifsConfirm}
+                    setClearConfirmOpen={setClearNotifsConfirm}
+                    isClearing={clearAllNotificationsMutation.isPending}
+                  />
                 )}
               </AnimatePresence>
+
             </div>
 
             <div className="w-px h-6 bg-gray-200 mx-2" />
@@ -595,7 +710,7 @@ export default function DashboardPage() {
 
             <button
               type="button"
-              onClick={() => setSettingsOpen(true)}
+              onClick={() => { setSettingsTab("profile"); setSettingsOpen(true); }}
               className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
             >
               <Settings className="w-4 h-4" />
@@ -609,214 +724,408 @@ export default function DashboardPage() {
               <LogOut className="w-4 h-4" />
             </button>
           </div>
-        </div>
-      </header>
+        </div >
+      </header >
 
-      <main className="flex-1 max-w-5xl mx-auto w-full px-6 py-6">
-        {/* Stats */}
-        <div className="grid grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-xl p-4 border" style={{ borderColor: "#e5e7eb" }}>
-            <p className="text-2xl font-semibold text-gray-900">{stats.total}</p>
-            <p className="text-sm text-gray-500">Total</p>
-          </div>
-          <div className="bg-white rounded-xl p-4 border" style={{ borderColor: "#e5e7eb" }}>
-            <p className="text-2xl font-semibold" style={{ color: "#6b7280" }}>{stats.todo}</p>
-            <p className="text-sm text-gray-500">To do</p>
-          </div>
-          <div className="bg-white rounded-xl p-4 border" style={{ borderColor: "#e5e7eb" }}>
-            <p className="text-2xl font-semibold" style={{ color: "#f59e0b" }}>{stats.inProgress}</p>
-            <p className="text-sm text-gray-500">In progress</p>
-          </div>
-          <div className="bg-white rounded-xl p-4 border" style={{ borderColor: "#e5e7eb" }}>
-            <p className="text-2xl font-semibold" style={{ color: "#10b981" }}>{stats.done}</p>
-            <p className="text-sm text-gray-500">Completed</p>
-          </div>
-        </div>
-
-        {/* Tabs & Actions */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
-            {[
-              { key: "my-tasks", label: "My Tasks", icon: ListTodo },
-              { key: "shared", label: "Shared", icon: Users },
-              { key: "archived", label: "Archived", icon: Archive },
-            ].map((tab) => (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => { setActiveTab(tab.key as TabType); setStatusFilter("ALL"); }}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-all ${activeTab === tab.key ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
-                  }`}
-              >
-                <tab.icon className="w-4 h-4" />
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {activeTab === "my-tasks" && (
-            <Button onClick={openCreate} size="sm">
-              <Plus className="w-4 h-4 mr-1.5" />
-              New Task
-            </Button>
-          )}
-        </div>
-
-        {/* Search & Filters */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-4 justify-between">
-          <div className="flex-1 relative max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <Input placeholder="Search tasks..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 h-10" />
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="bg-gray-100 p-1 rounded-lg flex gap-1">
-              <button
-                onClick={() => setViewMode("LIST")}
-                className={`p-1.5 rounded-md transition-all ${viewMode === "LIST" ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-600"
-                  }`}
-              >
-                <LayoutList className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setViewMode("BOARD")}
-                className={`p-1.5 rounded-md transition-all ${viewMode === "BOARD" ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-600"
-                  }`}
-              >
-                <KanbanSquare className="w-4 h-4" />
-              </button>
+      <main className="flex-1 max-w-[1500px] mx-auto w-full px-4 sm:px-6 py-4 sm:py-6 h-[calc(100vh-65px)] overflow-y-auto">
+        <div className="flex flex-col lg:flex-row gap-6 h-full">
+          {/* Main Content */}
+          <div className="flex-1 min-w-0 flex flex-col gap-6">
+            {/* Stats */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+              <div className="bg-white rounded-xl p-4 border" style={{ borderColor: "#e5e7eb" }}>
+                <p className="text-2xl font-semibold text-gray-900">{stats.total}</p>
+                <p className="text-sm text-gray-500">Total</p>
+              </div>
+              <div className="bg-white rounded-xl p-4 border" style={{ borderColor: "#e5e7eb" }}>
+                <p className="text-2xl font-semibold" style={{ color: "#6b7280" }}>{stats.todo}</p>
+                <p className="text-sm text-gray-500">To do</p>
+              </div>
+              <div className="bg-white rounded-xl p-4 border" style={{ borderColor: "#e5e7eb" }}>
+                <p className="text-2xl font-semibold" style={{ color: "#f59e0b" }}>{stats.inProgress}</p>
+                <p className="text-sm text-gray-500">In progress</p>
+              </div>
+              <div className="bg-white rounded-xl p-4 border" style={{ borderColor: "#e5e7eb" }}>
+                <p className="text-2xl font-semibold" style={{ color: "#10b981" }}>{stats.done}</p>
+                <p className="text-sm text-gray-500">Completed</p>
+              </div>
             </div>
 
-            {viewMode === "LIST" && (
-              <div className="flex gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setStatusFilter("ALL")}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium border transition-all ${statusFilter === "ALL" ? "bg-gray-900 text-white border-gray-900" : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
-                    }`}
-                >
-                  All
-                </button>
-                {statusOptions.map((s) => (
+            {/* Tabs & Actions */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+              <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
+                {[
+                  { key: "my-tasks", label: "My Tasks", icon: ListTodo },
+                  { key: "shared", label: "Shared", icon: Users },
+                  { key: "archived", label: "Archived", icon: Archive },
+                ].map((tab) => (
                   <button
-                    key={s.value}
+                    key={tab.key}
                     type="button"
-                    onClick={() => setStatusFilter(s.value)}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium border transition-all ${statusFilter === s.value ? "text-white border-transparent" : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
+                    onClick={() => { setActiveTab(tab.key as TabType); setStatusFilter([]); }}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-all ${activeTab === tab.key ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
                       }`}
-                    style={statusFilter === s.value ? { backgroundColor: s.color } : {}}
                   >
-                    {s.label}
+                    <tab.icon className="w-4 h-4" />
+                    {tab.label}
                   </button>
                 ))}
               </div>
-            )}
-          </div>
-        </div>
 
-        {/* Filtered Count */}
-        {statusFilter !== "ALL" && (
-          <p className="text-sm text-gray-500 mb-4">Showing {filteredTasks.length} {statusFilter.replace("_", " ").toLowerCase()} task{filteredTasks.length !== 1 ? "s" : ""}</p>
-        )}
-
-        {/* Tasks View (List or Board) */}
-        <div className="h-full">
-          {isLoading ? (
-            <div className="bg-white rounded-xl border p-8 flex items-center justify-center" style={{ borderColor: "#e5e7eb" }}>
-              <Loader size="md" />
-            </div>
-          ) : !isLoading && filteredTasks.length === 0 ? (
-            <div className="bg-white rounded-xl border text-center py-12" style={{ borderColor: "#e5e7eb" }}>
-              <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
-                <ListTodo className="w-6 h-6 text-gray-400" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-1">No tasks</h3>
-              <p className="text-gray-500 text-sm mb-4">
-                {activeTab === "archived" ? "Archived tasks will appear here" : activeTab === "shared" ? "Tasks shared with you appear here" : "Create your first task"}
-              </p>
               {activeTab === "my-tasks" && (
                 <Button onClick={openCreate} size="sm">
                   <Plus className="w-4 h-4 mr-1.5" />
-                  Create Task
+                  New Task
                 </Button>
               )}
             </div>
-          ) : viewMode === "BOARD" ? (
-            <KanbanBoard
-              tasks={filteredTasks}
-              onStatusChange={(taskId, newStatus) => updateMutation.mutate({ id: taskId, data: { status: newStatus } })}
-              onEdit={openEdit}
-              onDelete={(task) => setTaskToDelete(task)}
-              onShare={openShare}
-              isUpdating={updateMutation.isPending}
-            />
-          ) : (
-            <div className="space-y-2">
-              {filteredTasks.map((task, i) => (
-                <TaskListItem
-                  key={task.id}
-                  task={task}
-                  index={i}
-                  canEdit={canEdit}
-                  canShare={canShare}
-                  canDelete={canDelete}
-                  onEdit={openEdit}
-                  onShare={openShare}
-                  onArchive={(id) => archiveMutation.mutate(id)}
-                  onUnarchive={(id) => unarchiveMutation.mutate(id)}
-                  onDelete={() => setTaskToDelete(task)}
-                />
-              ))}
+
+            {/* Search & Filters */}
+            <div className="flex flex-col sm:flex-row gap-3 mb-4 justify-between">
+              <div className="flex-1 relative max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input placeholder="Search tasks..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 h-10" />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="bg-gray-100 p-1 rounded-lg flex gap-1">
+                  <button
+                    onClick={() => { setViewMode("LIST"); setStatusFilter([]); }}
+                    className={`p-1.5 rounded-md transition-all ${viewMode === "LIST" ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-600"
+                      }`}
+                  >
+                    <LayoutList className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => { setViewMode("BOARD"); setStatusFilter([]); }}
+                    className={`p-1.5 rounded-md transition-all ${viewMode === "BOARD" ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-600"
+                      }`}
+                  >
+                    <KanbanSquare className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => { setViewMode("CALENDAR"); setStatusFilter([]); }}
+                    className={`p-1.5 rounded-md transition-all ${viewMode === "CALENDAR" ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-600"
+                      }`}
+                  >
+                    <CalendarDays className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {viewMode === "LIST" && (
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setStatusFilter([])}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium border transition-all ${statusFilter.length === 0
+                        ? "bg-teal-600 text-white border-teal-600 shadow-sm"
+                        : "bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                        }`}
+                    >
+                      All
+                    </button>
+                    {statusOptions.map((s) => {
+                      const isActive = statusFilter.includes(s.value);
+                      return (
+                        <button
+                          key={s.value}
+                          type="button"
+                          onClick={() => {
+                            setStatusFilter(prev =>
+                              isActive
+                                ? prev.filter(p => p !== s.value)
+                                : [...prev, s.value]
+                            );
+                          }}
+                          className={`px-3 py-2 rounded-lg text-sm font-medium border transition-all ${isActive
+                            ? "bg-teal-600 text-white border-teal-600 shadow-sm"
+                            : "bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                            }`}
+                        >
+                          {s.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
-          )}
+
+            {/* Filtered Count */}
+            {statusFilter.length > 0 && (
+              <p className="text-sm text-gray-500 mb-4">
+                Showing {filteredTasks.length} task{filteredTasks.length !== 1 ? "s" : ""}
+                <span className="text-gray-400 mx-2">•</span>
+                Filters: {statusFilter.map(s => statusOptions.find(o => o.value === s)?.label).join(", ")}
+              </p>
+            )}
+
+            {/* Tasks View (List or Board) */}
+            <div className="h-full">
+              {isLoading ? (
+                <div className="bg-white rounded-xl border p-8 flex items-center justify-center" style={{ borderColor: "#e5e7eb" }}>
+                  <Loader size="md" />
+                </div>
+              ) : !isLoading && filteredTasks.length === 0 ? (
+                <div className="bg-white rounded-xl border text-center py-12" style={{ borderColor: "#e5e7eb" }}>
+                  <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
+                    <ListTodo className="w-6 h-6 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-1">No tasks found</h3>
+                  <p className="text-gray-500 text-sm mb-4">
+                    {statusFilter.length > 0 ? "Try adjusting your filters" :
+                      activeTab === "archived" ? "Archived tasks will appear here" :
+                        activeTab === "shared" ? "Tasks shared with you appear here" :
+                          "Create your first task"}
+                  </p>
+                  {activeTab === "my-tasks" && (
+                    <Button onClick={openCreate} size="sm">
+                      <Plus className="w-4 h-4 mr-1.5" />
+                      Create Task
+                    </Button>
+                  )}
+                </div>
+              ) : viewMode === "BOARD" ? (
+                <KanbanBoard
+                  tasks={kanbanTasks}
+                  onStatusChange={(taskId, newStatus) => updateMutation.mutate({ id: taskId, data: { status: newStatus } })}
+                  onEdit={openView}
+                  onDelete={(task) => setTaskToDelete(task)}
+                  onShare={openShare}
+                  isUpdating={updateMutation.isPending}
+                />
+              ) : viewMode === "CALENDAR" ? (
+                <CalendarView tasks={filteredTasks} onTaskClick={openView} />
+              ) : (
+                <div className="space-y-2">
+                  {filteredTasks.map((task, i) => (
+                    <TaskListItem
+                      key={task.id}
+                      task={task}
+                      index={i}
+                      canEdit={canEdit}
+                      canShare={canShare}
+                      canDelete={canDelete}
+                      onEdit={openView}
+                      onShare={openShare}
+                      onArchive={(id) => archiveMutation.mutate(id)}
+                      onUnarchive={(id) => unarchiveMutation.mutate(id)}
+                      onDelete={() => setTaskToDelete(task)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right Sidebar (Upcoming) */}
+          <div className="w-full lg:w-80 flex-shrink-0 space-y-6">
+            <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+              <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                <Clock className="w-4 h-4 text-teal-600" />
+                Upcoming Deadlines
+              </h3>
+              <div className="space-y-3">
+                {allMyTasks
+                  .filter(t => (t.dueDate || t.isTimeBased) && t.status !== "DONE" && !t.archived)
+                  .sort((a, b) => new Date(a.dueDate || 0).getTime() - new Date(b.dueDate || 0).getTime())
+                  .slice(0, 5)
+                  .map(task => (
+                    <button
+                      key={task.id}
+                      onClick={() => openView(task)}
+                      className="w-full text-left p-3 rounded-lg bg-gray-50 hover:bg-white hover:shadow-sm border border-transparent hover:border-gray-100 transition-all group"
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <p className="text-sm font-medium text-gray-700 truncate group-hover:text-teal-700 flex-1">{task.title}</p>
+                        <UrgencyBadge dueDate={task.dueDate} status={task.status} showLabel={false} />
+                      </div>
+                      {task.dueDate && (
+                        <p className="text-xs text-gray-400 flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          {new Date(task.dueDate).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                        </p>
+                      )}
+                    </button>
+                  ))}
+                {allMyTasks.filter(t => (t.dueDate || t.isTimeBased) && t.status !== "DONE").length === 0 && (
+                  <p className="text-xs text-gray-400 italic text-center py-2">No upcoming deadlines</p>
+                )}
+              </div>
+            </div>
+
+            {/* Trash Bin */}
+            <TrashBin onView={openView} />
+          </div>
         </div>
       </main>
 
-      {/* Share Modal */}
-      <Modal open={shareModalOpen} onClose={() => setShareModalOpen(false)} title="Share Task">
-        <div className="space-y-6">
-          <div className="flex gap-2">
-            <Input
-              value={shareEmail}
-              onChange={(e) => setShareEmail(e.target.value)}
-              placeholder="colleague@example.com"
-              className="flex-1"
+
+
+      {/* Task View Modal */}
+      <TaskViewModal
+        open={!!viewing}
+        task={viewing}
+        onClose={() => setViewing(null)}
+        onEdit={() => viewing && openEdit(viewing)}
+        onShare={() => viewing && openShare(viewing)}
+        onDelete={() => {
+          if (viewing) {
+            setTaskToDelete(viewing);
+            setViewing(null);
+          }
+        }}
+        onRestore={() => {
+          if (viewing) {
+            restoreMutation.mutate(viewing.id);
+            setViewing(null);
+          }
+        }}
+        onPermanentDelete={() => {
+          if (viewing) {
+            setTaskToDelete(viewing);
+            setViewing(null);
+          }
+        }}
+        canEdit={viewing ? canEdit(viewing) : false}
+        canShare={viewing ? canShare(viewing) : false}
+        canDelete={viewing ? canDelete(viewing) : false}
+      />
+
+
+      {/* Shortcuts Modal */}
+      <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+
+      {/* Create/Edit Modal */}
+      <CreateTaskModal
+        open={openModal}
+        onClose={() => setOpenModal(false)}
+        initialData={editing}
+        onSubmit={handleTaskSubmit}
+        isSubmitting={createMutation.isPending || updateMutation.isPending}
+        canEdit={!editing || canEdit(editing)}
+        onGenerateAI={handleAI}
+        onGenerateAIStream={handleAIStream}
+        onOpenSettings={() => { setSettingsTab("preferences"); setSettingsOpen(true); }}
+      />
+
+      {/* Delete Modal */}
+      {/* Delete Modal */}
+      <Modal
+        open={!!taskToDelete}
+        title={taskToDelete?.deletedAt ? "Delete Forever" : "Move to Trash"}
+        onClose={() => setTaskToDelete(null)}
+      >
+        <p className="text-gray-600 mb-6">
+          {taskToDelete?.deletedAt
+            ? <span>Permanently delete <span className="font-medium text-gray-900">{taskToDelete?.title}</span>? This cannot be undone.</span>
+            : <span>Move <span className="font-medium text-gray-900">{taskToDelete?.title}</span> to trash? You can restore it later.</span>
+          }
+        </p>
+        <div className="flex gap-2 justify-end">
+          <Button variant="outline" onClick={() => setTaskToDelete(null)}>Cancel</Button>
+          {taskToDelete?.deletedAt ? (
+            <CountdownButton
+              text="Delete Forever"
+              variant="danger"
+              onComplete={confirmDelete}
+              disabled={permanentDeleteMutation.isPending}
+              className="w-32"
             />
+          ) : (
+            <Button
+              variant="danger"
+              onClick={confirmDelete}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Moving..." : "Trash"}
+            </Button>
+          )}
+        </div>
+      </Modal>
+
+      {/* Share Modal */}
+      <Modal open={shareModalOpen} onClose={() => setShareModalOpen(false)} title="Share Task" zIndex={60}>
+        <div className="space-y-6">
+          {/* Invite Input Row */}
+          <div className="flex gap-2 items-center">
+            <div className="flex-1">
+              <Input
+                value={shareEmail}
+                onChange={(e) => setShareEmail(e.target.value)}
+                placeholder="colleague@example.com"
+                className="h-9"
+              />
+            </div>
             <div className="w-32">
               <CustomSelect
                 value={sharePermission}
                 onChange={(v) => setSharePermission(v as Permission)}
                 options={[{ label: "Viewer", value: "VIEWER" }, { label: "Editor", value: "EDITOR" }]}
+                size="sm"
+                className="h-9"
               />
             </div>
-            <Button onClick={handleShare} disabled={shareMutation.isPending || !shareEmail}>invite</Button>
+            <Button
+              onClick={handleShare}
+              disabled={shareMutation.isPending || !shareEmail}
+              size="sm"
+              className="h-9 px-4"
+            >
+              Invite
+            </Button>
           </div>
 
+          {/* Collaborators List */}
           <div className="space-y-3">
-            <h4 className="text-sm font-medium text-gray-900">Collaborators</h4>
+            <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Collaborators</h4>
             {collaboratorsQuery.isLoading ? (
-              <div className="text-center py-4"><Loader size="sm" /></div>
+              <div className="text-center py-6"><Loader size="sm" /></div>
             ) : collaboratorsQuery.data?.collaborators.length === 0 ? (
-              <p className="text-sm text-gray-500 italic">No one else has access</p>
+              <div className="text-center py-8 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                <p className="text-sm text-gray-500 italic">No one else has access yet</p>
+              </div>
             ) : (
               <div className="space-y-2">
                 {collaboratorsQuery.data?.collaborators.map((c) => (
-                  <div key={c.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg border border-gray-100">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center text-xs font-semibold">
-                        {c.name.charAt(0)}
+                  <div key={c.id} className="flex items-center justify-between p-3 bg-white rounded-xl border border-gray-100 shadow-sm transition-all hover:shadow-md hover:border-teal-100 group">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-teal-50 to-teal-100 text-teal-700 flex items-center justify-center text-xs font-bold shadow-sm border border-white">
+                        {c.name.charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-gray-900">{c.name}</p>
+                        <p className="text-sm font-semibold text-gray-900 leading-none mb-1">{c.name}</p>
                         <p className="text-xs text-gray-500">{c.email}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium px-2 py-1 bg-white border rounded text-gray-600">{c.permission}</span>
+                      {c.permission === "OWNER" ? (
+                        <span className="text-[10px] font-bold px-2.5 py-1 bg-gray-100 text-gray-600 rounded-full tracking-wide">OWNER</span>
+                      ) : c.id === user?.id ? (
+                        <span className="text-[10px] font-bold px-2.5 py-1 bg-white border border-gray-200 text-gray-500 rounded-full tracking-wide uppercase">{c.permission}</span>
+                      ) : (
+                        <div className="w-24">
+                          <CustomSelect
+                            value={c.permission}
+                            onChange={(v) => updatePermissionMutation.mutate({
+                              taskId: sharingTask!.id,
+                              userId: c.id,
+                              permission: v as "VIEWER" | "EDITOR"
+                            })}
+                            options={[
+                              { label: "Viewer", value: "VIEWER" },
+                              { label: "Editor", value: "EDITOR" }
+                            ]}
+                            size="sm"
+                            className="h-8 text-xs"
+                          />
+                        </div>
+                      )}
+
                       {c.id !== user?.id && sharingTask?.isOwner && (
                         <button
                           onClick={() => removeCollabMutation.mutate({ taskId: sharingTask.id, userId: c.id })}
-                          className="text-gray-400 hover:text-red-600 transition-colors"
+                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
                         >
                           <X className="w-4 h-4" />
                         </button>
@@ -830,87 +1139,25 @@ export default function DashboardPage() {
         </div>
       </Modal>
 
-      {/* Create/Edit Modal */}
-      <Modal open={openModal} onClose={() => setOpenModal(false)} title={editing ? (canEdit(editing) ? "Edit Task" : "Task Details") : "New Task"}>
-        <div className="space-y-4">
-          <div>
-            <label className="text-sm font-medium text-gray-700 mb-1 block">Title</label>
-            <Input
-              value={draft.title}
-              onChange={(e) => setDraft(d => ({ ...d, title: e.target.value }))}
-              placeholder="Task title"
-              disabled={!!editing && !canEdit(editing)}
-            />
-          </div>
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="text-sm font-medium text-gray-700">Description</label>
-              <button
-                type="button"
-                onClick={handleGenerate}
-                disabled={isGenerating || !draft.title || (!!editing && !canEdit(editing))}
-                className="text-xs flex items-center gap-1 text-teal-600 hover:text-teal-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isGenerating ? <Loader className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
-                {isGenerating ? "Thinking..." : "Generate Subtasks"}
-              </button>
-            </div>
-            <TextArea
-              rows={3}
-              value={draft.description}
-              onChange={(e) => setDraft(d => ({ ...d, description: e.target.value }))}
-              placeholder="Add details..."
-              disabled={!!editing && !canEdit(editing)}
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium text-gray-700 mb-1 block">Tags</label>
-            <Input
-              value={draft.tags}
-              onChange={(e) => setDraft(d => ({ ...d, tags: e.target.value }))}
-              placeholder="design, frontend"
-              disabled={!!editing && !canEdit(editing)}
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium text-gray-700 mb-1 block">Status</label>
-            <div className="flex gap-2">
-              {statusOptions.map((s) => (
-                <button
-                  key={s.value}
-                  type="button"
-                  onClick={() => setDraft(d => ({ ...d, status: s.value }))}
-                  disabled={!!editing && !canEdit(editing)}
-                  className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-all ${draft.status === s.value ? "text-white border-transparent" : "bg-white text-gray-600 border-gray-200"
-                    } ${editing && !canEdit(editing) ? "opacity-50 cursor-not-allowed" : ""}`}
-                  style={draft.status === s.value ? { backgroundColor: s.color } : {}}
-                >
-                  {s.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="pt-3 flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setOpenModal(false)}>Close</Button>
-            {(!editing || canEdit(editing)) && (
-              <Button onClick={handleSave} disabled={createMutation.isPending || updateMutation.isPending}>
-                {createMutation.isPending || updateMutation.isPending ? "Saving..." : editing ? "Save" : "Create"}
-              </Button>
-            )}
-          </div>
-        </div>
-      </Modal>
-
-      {/* Delete Modal */}
-      <Modal open={!!taskToDelete} title="Delete Task" onClose={() => setTaskToDelete(null)}>
-        <p className="text-gray-600 mb-6">Delete <span className="font-medium text-gray-900">{taskToDelete?.title}</span>? This cannot be undone.</p>
+      {/* Clear Notifications Confirmation Modal */}
+      <Modal open={clearNotifsConfirm} title="Clear All Notifications" onClose={() => setClearNotifsConfirm(false)}>
+        <p className="text-gray-600 mb-6">Are you sure you want to clear all your notifications? This action cannot be undone.</p>
         <div className="flex gap-2 justify-end">
-          <Button variant="outline" onClick={() => setTaskToDelete(null)}>Cancel</Button>
-          <Button variant="danger" onClick={confirmDelete} disabled={deleteMutation.isPending}>Delete</Button>
+          <Button variant="outline" onClick={() => setClearNotifsConfirm(false)}>Cancel</Button>
+          <CountdownButton
+            text="Clear All"
+            variant="danger"
+            onComplete={() => {
+              clearAllNotificationsMutation.mutate();
+              setClearNotifsConfirm(false);
+            }}
+            disabled={clearAllNotificationsMutation.isPending}
+            className="w-32"
+          />
         </div>
       </Modal>
 
-      <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
-    </div>
+      <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} defaultTab={settingsTab} />
+    </div >
   );
 }
