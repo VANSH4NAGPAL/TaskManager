@@ -1,10 +1,10 @@
-# Primetrade Project - Complete Technical Breakdown
+# TM Dashboard - Complete Technical Breakdown
 
-This document provides an exhaustive list of all technologies, architectural decisions, and specific features implemented in the Primetrade project. It is designed to be used as a reference for a Full Stack Developer resume or portfolio.
+This document provides an exhaustive list of all technologies, architectural decisions, and specific features implemented in the TM Dashboard project. It is designed to be used as a reference for a Full Stack Developer resume or portfolio.
 
 ## 🏗️ Project Architecture
 - **Architecture Style:** Decoupled Client-Server Monorepo
-- **Frontend:** Next.js 15 (App Router) Single Page Application (SPA)
+- **Frontend:** Next.js 16+ (App Router) Single Page Application (SPA)
 - **Backend:** Node.js + Express REST API
 - **Database:** PostgreSQL (Relational) with Prisma ORM
 - **Communication:** REST API + Server-Sent Events (SSE) for Real-time Streaming
@@ -14,7 +14,7 @@ This document provides an exhaustive list of all technologies, architectural dec
 ## 💻 Frontend Ecosystem (Next.js & React)
 
 ### Core Technologies
-- **Next.js 15+ (App Router):** Utilized for file-based routing, server-side rendering (SSR), and simplified deployment.
+- **Next.js 16+ (App Router):** Utilized for file-based routing, server-side rendering (SSR), and simplified deployment.
 - **React 19:** Leveraging latest features like Actions and optimistic UI updates.
 - **TypeScript:** Strict type safety (Interfaces for Task, User, API Responses) to prevent runtime errors.
 - **Tailwind CSS 4:** Utility-first styling engine used for a completely custom, responsive design system without component library bloat.

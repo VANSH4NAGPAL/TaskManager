@@ -10,9 +10,9 @@ import { Loader } from "../../components/ui/loader";
 import { useSignup, useCurrentUser } from "../../hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, CheckCircle2, Sparkles, Users } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Sparkles, Users, Eye, EyeOff } from "lucide-react";
 
 const schema = z.object({
   name: z.string().min(2, "Enter your name"),
@@ -37,6 +37,7 @@ export default function SignupPage() {
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
   const mutation = useSignup();
+  const [showPassword, setShowPassword] = useState(false);
 
   const onSubmit = handleSubmit(async (values) => {
     try {
@@ -208,13 +209,26 @@ export default function SignupPage() {
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-900">Password</label>
-              <Input
-                type="password"
-                placeholder="••••••••"
-                {...register("password")}
-                aria-invalid={!!errors.password}
-                className="h-12"
-              />
+              <div className="relative">
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  {...register("password")}
+                  aria-invalid={!!errors.password}
+                  className="h-12 pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5" />
+                  ) : (
+                    <Eye className="h-5 w-5" />
+                  )}
+                </button>
+              </div>
               {errors.password && <p className="text-xs text-red-600">{errors.password.message}</p>}
               <p className="text-xs text-gray-500">Must be at least 8 characters</p>
             </div>
