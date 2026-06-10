@@ -19,6 +19,78 @@ import {
   Globe,
 } from "lucide-react";
 
+const BASE_URL = "https://task-manager-ten-omega-60.vercel.app";
+
+const webAppJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  name: "TM Dashboard",
+  url: BASE_URL,
+  description:
+    "TM Dashboard is a free, secure task management app with real-time collaboration, Kanban boards, smart reminders, and team sharing.",
+  applicationCategory: "ProductivityApplication",
+  operatingSystem: "Web Browser",
+  offers: {
+    "@type": "Offer",
+    price: "0",
+    priceCurrency: "USD",
+  },
+  author: {
+    "@type": "Person",
+    name: "Vansh Nagpal",
+    url: "https://vanshdev.netlify.app/",
+  },
+  featureList: [
+    "Kanban board view",
+    "List view",
+    "Task collaboration and sharing",
+    "Real-time notifications",
+    "Smart reminders",
+    "CSV and JSON export",
+    "JWT authentication",
+    "Archive completed tasks",
+  ],
+};
+
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: [
+    {
+      "@type": "Question",
+      name: "Is TM Dashboard free?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Yes! TM Dashboard is completely free to use with all features included.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "How secure is my data?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "We use JWT authentication with bcrypt-encrypted passwords and secure HTTPS connections. Your data is stored safely and never shared.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Can I collaborate with my team?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Yes! Share any task with team members by email. You can set them as Viewer (read-only) or Editor (can modify). You'll get notified when they make changes.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Can I export my data?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Absolutely. Export all your tasks as JSON or CSV with one click. Your data is yours.",
+      },
+    },
+  ],
+};
+
 export default function Home() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [previewMode, setPreviewMode] = useState<"LIST" | "BOARD">("BOARD");
@@ -71,6 +143,17 @@ export default function Home() {
   ];
 
   return (
+    <>
+      {/* JSON-LD Structured Data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(webAppJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
+
     <div className="min-h-screen flex flex-col bg-dots" style={{ backgroundColor: "#fafafa" }}>
       {/* Header */}
       <header className="relative z-20 flex items-center justify-between w-full max-w-5xl mx-auto px-6 py-5">
@@ -81,9 +164,9 @@ export default function Home() {
           <span className="font-medium text-gray-900">TM Dashboard</span>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-6 text-sm text-gray-600">
-          <Link href="#features" className="hover:text-gray-900 transition-colors">Features</Link>
-          <Link href="#faq" className="hover:text-gray-900 transition-colors">FAQ</Link>
+        <nav className="hidden md:flex items-center gap-6 text-sm text-gray-600" aria-label="Main navigation">
+          <Link href="#features" className="hover:text-gray-900 transition-colors" aria-label="View features">Features</Link>
+          <Link href="#faq" className="hover:text-gray-900 transition-colors" aria-label="View FAQ">FAQ</Link>
         </nav>
 
         <div className="flex items-center gap-2">
@@ -323,16 +406,16 @@ export default function Home() {
             <span className="text-sm font-medium text-gray-700">TM Dashboard</span>
           </div>
           <div className="flex items-center gap-4">
-            <a href="https://vanshdev.netlify.app/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-gray-600 transition-colors" title="Portfolio">
+            <a href="https://vanshdev.netlify.app/" target="_blank" rel="noopener noreferrer me" className="text-gray-400 hover:text-gray-600 transition-colors" title="Portfolio" aria-label="Vansh Nagpal's Portfolio">
               <Globe className="w-5 h-5" />
             </a>
-            <a href="https://github.com/VANSH4NAGPAL" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-gray-600 transition-colors" title="GitHub">
+            <a href="https://github.com/VANSH4NAGPAL" target="_blank" rel="noopener noreferrer me" className="text-gray-400 hover:text-gray-600 transition-colors" title="GitHub" aria-label="GitHub profile">
               <Github className="w-5 h-5" />
             </a>
-            <a href="https://x.com/VanshNOk" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-gray-600 transition-colors" title="X (Twitter)">
+            <a href="https://x.com/VanshNOk" target="_blank" rel="noopener noreferrer me" className="text-gray-400 hover:text-gray-600 transition-colors" title="X (Twitter)" aria-label="X (Twitter) profile">
               <Twitter className="w-5 h-5" />
             </a>
-            <a href="https://www.linkedin.com/in/vansh-nagpal/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-gray-600 transition-colors" title="LinkedIn">
+            <a href="https://www.linkedin.com/in/vansh-nagpal/" target="_blank" rel="noopener noreferrer me" className="text-gray-400 hover:text-gray-600 transition-colors" title="LinkedIn" aria-label="LinkedIn profile">
               <Linkedin className="w-5 h-5" />
             </a>
           </div>
@@ -342,5 +425,6 @@ export default function Home() {
         </div>
       </footer>
     </div>
+    </>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+
 import { TrashBin } from "@/components/dashboard/TrashBin";
 import { NotificationPanel } from "@/components/dashboard/NotificationPanel";
 
